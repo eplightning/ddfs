@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package api;
+
+service Settings {
+    rpc GetClientSettings (ClientSettingsRequest) returns (ClientSettingsResponse);
+    rpc GetServerSettings (ServerSettingsRequest) returns (ServerSettingsResponse);
+}
+
+service Nodes {
+    rpc GetBlockStores (GetBlockStoresRequest) returns (GetBlockStoresResponse);
+    rpc GetVolumeStores (GetVolumeStoresRequest) returns (GetVolumeStoresResponse);
+    // TODO: watch, join, leave
+}
+
+service VolumeManager {
+    rpc GetVolumes (GetVolumesRequest) returns (GetVolumesResponse);
+    rpc CreateVolume (CreateVolumeRequest) returns (CreateVolumeResponse);
+    rpc DeleteVolume (DeleteVolumeRequest) returns (DeleteVolumeResponse);
+}
+
+message ClientSettingsRequest {
+
+}
+
+message ClientSettingsResponse {
+    int64 revision = 1;
+    ClientSettings settings = 2;
+}
+
+message ClientSettings {
+    enum HashAlgorithm {
+        SHA256 = 0;
+    }
+    HashAlgorithm hashing = 1;
+    oneof chunking {
+        RabinChunkAlgorithm rabin = 2;
+    }
+    int32 min_fill_size = 3;
+}
+
+message RabinChunkAlgorithm {
+    uint64 poly = 1;
+    int32 max_size = 2;
+    int32 min_size = 3;
+}
+
+message ServerSettingsRequest {
+
+}
+
+message ServerSettingsResponse {
+    int64 revision = 1;
+    ServerSettings settings = 2;
+}
+
+message ServerSettings {
+    int64 shard_size = 1;
+}
+
+message GetBlockStoresRequest {
+
+}
+
+message GetBlockStoresResponse {
+    int64 revision = 1;
+    repeated NodeReplicaSet nodes = 2;
+}
+
+message GetVolumeStoresRequest {
+
+}
+
+message GetVolumeStoresResponse {
+    int64 revision = 1;
+    repeated NodeReplicaSet nodes = 2;
+}
+
+message NodeReplicaSet {
+    int64 slot = 1;
+    repeated Node nodes = 2;
+}
+
+message Node {
+    string address = 1;
+    string name = 2;
+}
