@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package api;
+
+service BlockStore {
+    rpc Get(BlockGetRequest) returns (stream BlockGetResponse) {}
+    rpc Put(stream BlockPutRequest) returns (BlockPutResponse) {}
+
+    rpc Reserve(BlockReserveRequest) returns (BlockReserveResponse) {}
+    rpc Delete(BlockDeleteRequest) returns (BlockDeleteResponse) {}
+}
+
+message BlockGetRequest {
+    repeated bytes hashes = 1;
+}
+
+message BlockGetResponse {
+    message Info {
+        BlockResponseHeader header = 1;
+    }
+    
+    message Data {
+        repeated bytes blocks = 1;
+    }
+
+    oneof msg {
+        Info info = 1;
+        Data data = 2;
+    }
+}
+
+message BlockDeleteRequest {
+    repeated bytes hashes = 1;
+}
+
+message BlockDeleteResponse {
+    BlockResponseHeader header = 1;
+}
+
+message BlockReserveRequest {
+    repeated bytes hashes = 1;
+}
+
+message BlockReserveResponse {
+    BlockResponseHeader header = 1;
+    string reservation_id = 2;
+    repeated int32 missing_blocks = 3;
+}
+
+message BlockPutRequest {
+    message Info {
+        string reservation_id = 1;
+    }
+    
+    message Data {
+        repeated HashBlockPair blocks = 1;
+    }
+
+    oneof msg {
+        Info info = 1;
+        Data data = 2;
+    }
+}
+
+message BlockPutResponse {
+    BlockResponseHeader header = 1;
+}
+
+message HashBlockPair {
+    bytes hash = 1;
+    bytes block = 2;
+}
+
+message BlockResponseHeader {
+    int32 error = 1;
+    string error_msg = 2;
+}

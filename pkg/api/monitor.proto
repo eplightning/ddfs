@@ -3,40 +3,53 @@ syntax = "proto3";
 package api;
 
 service Settings {
-    rpc GetClientSettings (ClientSettingsRequest) returns (ClientSettingsResponse);
-    rpc GetServerSettings (ServerSettingsRequest) returns (ServerSettingsResponse);
+    rpc GetClientSettings (ClientSettingsRequest) returns (ClientSettingsResponse) {}
+    rpc GetServerSettings (ServerSettingsRequest) returns (ServerSettingsResponse) {}
 }
 
 service Nodes {
-    rpc GetBlockStores (GetBlockStoresRequest) returns (GetBlockStoresResponse);
-    rpc GetVolumeStores (GetVolumeStoresRequest) returns (GetVolumeStoresResponse);
+    rpc GetBlockStores (GetBlockStoresRequest) returns (GetBlockStoresResponse) {}
+    rpc GetIndexStores (GetIndexStoresRequest) returns (GetIndexStoresResponse) {}
     // TODO: watch, join, leave
 }
 
-service VolumeManager {
-    rpc GetVolumes (GetVolumesRequest) returns (GetVolumesResponse);
-    rpc CreateVolume (CreateVolumeRequest) returns (CreateVolumeResponse);
-    rpc DeleteVolume (DeleteVolumeRequest) returns (DeleteVolumeResponse);
+service Volumes {
+    rpc Get (GetVolumesRequest) returns (GetVolumesResponse) {}
+    rpc Create (CreateVolumeRequest) returns (CreateVolumeResponse) {}
+    rpc Delete (DeleteVolumeRequest) returns (DeleteVolumeResponse) {}
+    rpc Watch (stream WatchVolumesRequest) returns (stream WatchVolumesResponse) {}
+    // TODO: resize
+
+    rpc UpdateShards (UpdateShardsRequest) returns (UpdateShardsResponse) {}
 }
+
+//
+// Settings
+//
 
 message ClientSettingsRequest {
 
 }
 
 message ClientSettingsResponse {
-    int64 revision = 1;
+    MonitorResponseHeader header = 1;
     ClientSettings settings = 2;
 }
 
+enum HashAlgorithm {
+    SHA256 = 0;
+    MURMURHASH3 = 1;
+    RIPEMD160 = 2;
+}
+
 message ClientSettings {
-    enum HashAlgorithm {
-        SHA256 = 0;
+    int32 min_fill_size = 1;
+    HashAlgorithm hash_algo = 2;
+
+    oneof chunk_algo {
+        RabinChunkAlgorithm rabin = 3;
     }
-    HashAlgorithm hashing = 1;
-    oneof chunking {
-        RabinChunkAlgorithm rabin = 2;
-    }
-    int32 min_fill_size = 3;
+    
 }
 
 message RabinChunkAlgorithm {
@@ -50,7 +63,7 @@ message ServerSettingsRequest {
 }
 
 message ServerSettingsResponse {
-    int64 revision = 1;
+    MonitorResponseHeader header = 1;
     ServerSettings settings = 2;
 }
 
@@ -58,21 +71,25 @@ message ServerSettings {
     int64 shard_size = 1;
 }
 
+//
+// Nodes
+//
+
 message GetBlockStoresRequest {
 
 }
 
 message GetBlockStoresResponse {
-    int64 revision = 1;
+    MonitorResponseHeader header = 1;
     repeated NodeReplicaSet nodes = 2;
 }
 
-message GetVolumeStoresRequest {
+message GetIndexStoresRequest {
 
 }
 
-message GetVolumeStoresResponse {
-    int64 revision = 1;
+message GetIndexStoresResponse {
+    MonitorResponseHeader header = 1;
     repeated NodeReplicaSet nodes = 2;
 }
 
@@ -84,4 +101,92 @@ message NodeReplicaSet {
 message Node {
     string address = 1;
     string name = 2;
+    bool primary = 3;
+}
+
+//
+// Volumes
+//
+
+message GetVolumesRequest {
+
+}
+
+message GetVolumesResponse {
+    MonitorResponseHeader header = 1;
+    repeated Volume volumes = 2;
+}
+
+message CreateVolumeRequest {
+    string name = 1;
+    int64 shards = 2;
+}
+
+message CreateVolumeResponse {
+    MonitorResponseHeader header = 1;
+}
+
+message DeleteVolumeRequest {
+    string name = 1;
+}
+
+message DeleteVolumeResponse {
+    MonitorResponseHeader header = 1;
+}
+
+message WatchVolumesRequest {
+    WatchRequestHeader header = 1;
+}
+
+message WatchVolumesResponse {
+    WatchResponseHeader header = 1;
+    repeated Volume volumes = 2;
+}
+
+message UpdateShardsRequest {
+    string volume_name = 1;
+    repeated int64 added_shards = 2;
+    repeated int64 removed_shards = 3;
+}
+
+message UpdateShardsResponse {
+    MonitorResponseHeader header = 1;
+}
+
+enum VolumeState {
+    NEW = 0;
+    CREATED = 1;
+    RESIZING = 2;
+    DELETING = 3;
+    DELETED = 4;
+}
+
+message Volume {
+    string name = 1;
+    VolumeState state = 2;
+    int64 shards = 3;
+    int64 requested_shards = 4;
+    repeated int64 current_shards = 5;
+}
+
+//
+// Common
+//
+
+message MonitorResponseHeader {
+    int64 revision = 1;
+    int32 error = 2;
+    string error_msg = 3;
+}
+
+message WatchRequestHeader {
+    int64 start_revision = 1;
+    bool end = 2;
+}
+
+message WatchResponseHeader {
+    bool created = 1;
+    bool canceled = 2;
+    bool error = 3;
+    string error_msg = 4;
 }

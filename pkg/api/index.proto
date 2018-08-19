@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package api;
+
+service IndexStore {
+    rpc GetRange (IndexGetRangeRequest) returns (stream IndexGetRangeResponse) {}
+    rpc PutRange (stream IndexPutRangeRequest) returns (IndexPutRangeResponse) {}
+}
+
+message IndexGetRangeRequest {
+    string shard = 1;
+    int64 start = 2;
+    int64 end = 3; 
+}
+
+message IndexGetRangeResponse {
+    message Info {
+        IndexResponseHeader header = 1;
+        int64 start = 2;
+        int64 end = 3; 
+    }
+
+    message Data {
+        repeated IndexEntry entries = 1;
+    }
+
+    oneof msg {
+        Info info = 1;
+        Data data = 2;
+    }
+}
+
+message IndexPutRangeRequest {
+    message Info {
+        string shard = 1;
+        int64 revision = 2;
+        int64 start = 3;
+        int64 end = 4;
+    }
+    
+    message Data {
+        repeated IndexEntry entries = 1;
+    }
+
+    oneof msg {
+        Info info = 1;
+        Data data = 2;
+    }
+}
+
+message IndexPutRangeResponse {
+    IndexResponseHeader header = 1;
+}
+
+message IndexEntry {
+    oneof entry {
+        HashIndexEntry hash = 1;
+        FillIndexEntry fill = 2;
+    }
+}
+
+message HashIndexEntry {
+    int32 size = 1;
+    bytes hash = 2;
+}
+
+message FillIndexEntry {
+    int32 size = 1;
+    int32 byte = 2;
+}
+
+message IndexResponseHeader {
+    int64 revision = 1;
+    int32 error = 2;
+    string error_msg = 3;
+}
