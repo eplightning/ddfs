@@ -6,7 +6,6 @@ import "io"
 type FixedChunker struct {
 	blockSize int
 	reader    io.Reader
-	buffer    []byte
 }
 
 // NewFixedChunker creates new fixed chunker
@@ -18,28 +17,18 @@ func NewFixedChunker(blockSize int) *FixedChunker {
 }
 
 // NextChunk reads next chunk
-func (chunker *FixedChunker) NextChunk() ([]byte, error) {
+func (chunker *FixedChunker) NextChunk() (Chunk, error) {
 	buffer := make([]byte, chunker.blockSize)
-	read := 0
+	read, err := io.ReadFull(chunker.reader, buffer)
 
-	for read < chunker.blockSize {
-		readNow, err := chunker.reader.Read(buffer[read:])
-
-		read += readNow
-
-		if err != nil {
-			return buffer[0:read], err
-		}
+	if err == nil || err == io.ErrUnexpectedEOF {
+		return NewRawChunk(buffer[0:read]), nil
 	}
 
-	return buffer, nil
+	return nil, err
 }
 
 // Reset resets reader instance
 func (chunker *FixedChunker) Reset(reader io.Reader) {
 	chunker.reader = reader
-}
-
-func (chunker *FixedChunker) Overhead() int {
-	return 0
 }

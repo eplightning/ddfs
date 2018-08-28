@@ -21,7 +21,7 @@ message IndexGetRangeResponse {
     }
 
     message Data {
-        repeated IndexEntry entries = 1;
+        IndexSlice slice = 1;
     }
 
     oneof msg {
@@ -39,7 +39,7 @@ message IndexPutRangeRequest {
     }
     
     message Data {
-        repeated IndexEntry entries = 1;
+        IndexSlice slice = 1;
     }
 
     oneof msg {
@@ -50,6 +50,21 @@ message IndexPutRangeRequest {
 
 message IndexPutRangeResponse {
     IndexResponseHeader header = 1;
+}
+
+message IndexShard {
+    int64 revision = 1;
+    repeated IndexSliceLocation slices = 2;
+}
+
+message IndexSliceLocation {
+    int64 start = 1;
+    int64 end = 2;
+    string id = 3;
+}
+
+message IndexSlice {
+    repeated IndexEntry entries = 1;
 }
 
 message IndexEntry {

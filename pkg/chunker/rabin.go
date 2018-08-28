@@ -15,36 +15,30 @@ type RabinChunker struct {
 }
 
 // NewRabinChunker creates new variable chunker
-func NewRabinChunker(minSize, maxSize int) *RabinChunker {
-	// randomPoly, _ := restic.RandomPolynomial()
-	// log.Println(uint64(randomPoly))
-	randomPoly := restic.Pol(14152035864944967)
+func NewRabinChunker(minSize, maxSize int, poly uint64) *RabinChunker {
+	polynomial := restic.Pol(poly)
 
 	return &RabinChunker{
-		Chunker: restic.NewWithBoundaries(nil, randomPoly, uint(minSize), uint(maxSize)),
-		poly:    randomPoly,
+		Chunker: restic.NewWithBoundaries(nil, polynomial, uint(minSize), uint(maxSize)),
+		poly:    polynomial,
 		maxSize: uint(maxSize),
 		minSize: uint(minSize),
 	}
 }
 
 // NextChunk reads next chunk
-func (chunker *RabinChunker) NextChunk() ([]byte, error) {
+func (chunker *RabinChunker) NextChunk() (Chunk, error) {
 	buffer := make([]byte, chunker.maxSize)
 	chunk, err := chunker.Chunker.Next(buffer)
 
 	if err == nil {
-		return chunk.Data, nil
+		return NewRawChunk(chunk.Data), nil
 	}
 
-	return []byte{}, err
+	return nil, err
 }
 
 // Reset resets reader instance
 func (chunker *RabinChunker) Reset(reader io.Reader) {
 	chunker.Chunker.ResetWithBoundaries(reader, chunker.poly, chunker.minSize, chunker.maxSize)
-}
-
-func (chunker *RabinChunker) Overhead() int {
-	return 4
 }

@@ -48,6 +48,8 @@ message ClientSettings {
 
     oneof chunk_algo {
         RabinChunkAlgorithm rabin = 3;
+        FixedChunkAlgorithm fixed = 4;
+        FastCDCChunkAlgorithm fastcdc = 5;
     }
     
 }
@@ -56,6 +58,16 @@ message RabinChunkAlgorithm {
     uint64 poly = 1;
     int32 max_size = 2;
     int32 min_size = 3;
+}
+
+message FixedChunkAlgorithm {
+    int32 max_size = 1;
+}
+
+message FastCDCChunkAlgorithm {
+    int32 max_size = 1;
+    int32 min_size = 2;
+    int32 avg_size = 3;
 }
 
 message ServerSettingsRequest {
@@ -69,6 +81,7 @@ message ServerSettingsResponse {
 
 message ServerSettings {
     int64 shard_size = 1;
+    int32 shard_entries_per_slice = 2;
 }
 
 //

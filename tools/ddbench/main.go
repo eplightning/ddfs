@@ -30,7 +30,7 @@ func main() {
 
 	switch *chunkerFlag {
 	case "rabin":
-		chunker = ch.NewRabinChunker(*chunkerVarMinSizeFlag, *chunkerVarMaxSizeFlag)
+		chunker = ch.NewRabinChunker(*chunkerVarMinSizeFlag, *chunkerVarMaxSizeFlag, 14152035864944967)
 		log.Println("Using rabin chunker")
 	default:
 		chunker = ch.NewFixedChunker(*chunkerFixedBlockSizeFlag)
@@ -52,7 +52,7 @@ func main() {
 	traversePipe := internal.NewTraversePipeline(pathChannel)
 	chunkPipe := internal.NewChunkPipeline(traversePipe.Output(), chunker)
 	hashPipe := internal.NewHashPipeline(chunkPipe.Output(), hasher)
-	storePipe := internal.NewStorePipeline(hashPipe.Output(), db, chunker.Overhead())
+	storePipe := internal.NewStorePipeline(hashPipe.Output(), db, 4)
 
 	go traversePipe.Process()
 	go chunkPipe.Process()

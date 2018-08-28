@@ -71,6 +71,10 @@ message HashBlockPair {
     bytes block = 2;
 }
 
+message BlockMetadata {
+    int32 references = 1;
+}
+
 message BlockResponseHeader {
     int32 error = 1;
     string error_msg = 2;
