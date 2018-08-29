@@ -53,7 +53,7 @@ message BlockPutRequest {
     }
     
     message Data {
-        repeated HashBlockPair blocks = 1;
+        repeated bytes blocks = 1;
     }
 
     oneof msg {
@@ -64,11 +64,6 @@ message BlockPutRequest {
 
 message BlockPutResponse {
     BlockResponseHeader header = 1;
-}
-
-message HashBlockPair {
-    bytes hash = 1;
-    bytes block = 2;
 }
 
 message BlockMetadata {
