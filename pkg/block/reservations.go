@@ -29,6 +29,16 @@ func NewReservationManager(db *badger.DB, meta *MetadataManager) *ReservationMan
 	return manager
 }
 
+func (man *ReservationManager) Get(id string) (*api.BlockReservation, error) {
+	man.mutex.Lock()
+	defer man.mutex.Unlock()
+	reservation, ok := man.reservations.Reservations[id]
+	if !ok {
+		return nil, errors.New("reservation not found")
+	}
+	return reservation, nil
+}
+
 func (man *ReservationManager) Finish(id string) error {
 	man.mutex.Lock()
 	defer man.mutex.Unlock()
