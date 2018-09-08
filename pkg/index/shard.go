@@ -43,17 +43,15 @@ func NewShard(settings ShardSettings, db *badger.DB, cache *lru.ARCCache) (*Shar
 		slicePrefix: "slices/" + settings.ID + "/",
 	}
 
+	var err error
+
 	if settings.New {
-		if err := shard.createTable(); err != nil {
-			return nil, err
-		}
+		err = shard.createTable()
 	} else {
-		if err := shard.loadTable(); err != nil {
-			return nil, err
-		}
+		err = shard.loadTable()
 	}
 
-	return shard, nil
+	return shard, err
 }
 
 func (shard *Shard) GetRange(start, end int64) (*RangeData, error) {
@@ -155,7 +153,7 @@ func (shard *Shard) putRangeTx(data RangeData, txn *badger.Txn, ids []int64, off
 	for _, entry := range entries {
 		if currentChunk == int(shard.settings.SliceSize) {
 			currentChunk = 0
-			locations[currentSlice].End = currentLeft - 1
+			locations[currentSlice].End = currentLeft
 			currentSlice++
 		}
 		if currentChunk == 0 {
@@ -178,7 +176,7 @@ func (shard *Shard) putRangeTx(data RangeData, txn *badger.Txn, ids []int64, off
 		currentChunk++
 		currentLeft += entry.BlockSize
 	}
-	locations[currentSlice].End = currentLeft - 1
+	locations[currentSlice].End = currentLeft
 
 	for i, location := range locations {
 		err := shard.updateSlice(location.Id, slices[i], txn)
@@ -215,17 +213,17 @@ func (shard *Shard) putRangeTx(data RangeData, txn *badger.Txn, ids []int64, off
 }
 
 func (shard *Shard) sliceIndex(start, end int64) ([]int64, int64, int64, int64, int64, error) {
-	if start > end || end > shard.settings.Size {
+	if start >= end || end > shard.settings.Size {
 		return nil, 0, 0, 0, 0, errors.New("invalid start and end parameters")
 	}
 	
-	slices := make([]int64, 0, 3)
+	slices := make([]int64, 0, 1)
 
 	var lastOffset, firstOffset, sliceStart, sliceEnd int64
 	firstFound := false
 
 	for _, slice := range shard.table.Slices {
-		if slice.End < start {
+		if slice.End <= start {
 			continue
 		}
 
@@ -235,11 +233,11 @@ func (shard *Shard) sliceIndex(start, end int64) ([]int64, int64, int64, int64, 
 			sliceStart = slice.Start
 		}
 
-		if slice.Start > end {
+		if slice.Start >= end {
 			break
 		}
 
-		lastOffset = end - slice.Start + 1
+		lastOffset = end - slice.Start
 		sliceEnd = slice.End
 		slices = append(slices, slice.Id)
 	}
@@ -249,20 +247,6 @@ func (shard *Shard) sliceIndex(start, end int64) ([]int64, int64, int64, int64, 
 	}
 	
 	return slices, firstOffset, lastOffset, sliceStart, sliceEnd, nil
-}
-
-func (shard *Shard) loadSlices(indices []int64, txn *badger.Txn) ([]*api.IndexSlice, error) {
-	slices := make([]*api.IndexSlice, 0, len(indices))
-
-	for i, id := range indices {
-		slice, err := shard.slice(id, txn)
-		if err != nil {
-			return nil, err
-		}
-		slices[i] = slice
-	}
-
-	return slices, nil
 }
 
 func (shard *Shard) findEntries(slice *api.IndexSlice, start, end int64, before bool, after bool) ([]*api.IndexEntry, int64, int64) {
@@ -275,7 +259,7 @@ func (shard *Shard) findEntries(slice *api.IndexSlice, start, end int64, before 
 		prevOffset = offset
 		offset += entry.BlockSize
 
-		if offset < start {
+		if offset <= start {
 			if before {
 				entries = append(entries, entry)
 			}
@@ -295,7 +279,7 @@ func (shard *Shard) findEntries(slice *api.IndexSlice, start, end int64, before 
 			entries = append(entries, entry)
 			lastOffset = offset
 
-			if offset > end && end != -1 {
+			if offset >= end && end != -1 {
 				break
 			}
 		} else {
@@ -308,6 +292,20 @@ func (shard *Shard) findEntries(slice *api.IndexSlice, start, end int64, before 
 	}
 
 	return entries, firstOffset, lastOffset
+}
+
+func (shard *Shard) loadSlices(indices []int64, txn *badger.Txn) ([]*api.IndexSlice, error) {
+	slices := make([]*api.IndexSlice, len(indices))
+
+	for i, id := range indices {
+		slice, err := shard.slice(id, txn)
+		if err != nil {
+			return nil, err
+		}
+		slices[i] = slice
+	}
+
+	return slices, nil
 }
 
 func (shard *Shard) createTable() error {
@@ -323,9 +321,11 @@ func (shard *Shard) createTable() error {
 		shard.table.Slices = make([]*api.IndexSliceLocation, 1)
 		shard.table.SliceCounter = 1
 
-		shard.table.Slices[0].Id = 0
-		shard.table.Slices[0].Start = 0
-		shard.table.Slices[0].End = shard.settings.Size
+		shard.table.Slices[0] = &api.IndexSliceLocation{
+			Id: 0,
+			Start: 0,
+			End: shard.settings.Size,
+		}
 
 		slice := &api.IndexSlice{
 			Entries: []*api.IndexEntry{shard.createFillEntry(shard.settings.Size, 0)},
