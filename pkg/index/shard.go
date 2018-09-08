@@ -122,7 +122,6 @@ func (shard *Shard) PutRange(data RangeData) error {
 func (shard *Shard) putRangeTx(data RangeData, txn *badger.Txn, ids []int64, offLeft, offRight, left, right int64) error {
 	var entries []*api.IndexEntry
 	var rightEntries []*api.IndexEntry
-	var sliceLeft, sliceRight int64
 
 	slice, err := shard.slice(ids[0], txn)
 	if err != nil {
@@ -191,8 +190,8 @@ func (shard *Shard) putRangeTx(data RangeData, txn *badger.Txn, ids []int64, off
 	newIndex := make([]*api.IndexSliceLocation, 0, len(shard.table.Slices) - len(ids) + len(locations))
 	copied := false
 
-	for _, location := shard.table.Slices {
-		if location.Start < start || location.Start > end {
+	for _, location := range shard.table.Slices {
+		if location.Start < left || location.Start > right {
 			newIndex = append(newIndex, location)
 		} else if !copied {
 			newIndex = append(newIndex, locations...)
