@@ -54,13 +54,14 @@ message IndexPutRangeResponse {
 
 message IndexShard {
     int64 revision = 1;
-    repeated IndexSliceLocation slices = 2;
+    int64 slice_counter = 2;
+    repeated IndexSliceLocation slices = 3;
 }
 
 message IndexSliceLocation {
     int64 start = 1;
     int64 end = 2;
-    string id = 3;
+    int64 id = 3;
 }
 
 message IndexSlice {
@@ -68,20 +69,20 @@ message IndexSlice {
 }
 
 message IndexEntry {
+    int64 block_size = 1;
+
     oneof entry {
-        HashIndexEntry hash = 1;
-        FillIndexEntry fill = 2;
+        HashIndexEntry hash = 2;
+        FillIndexEntry fill = 3;
     }
 }
 
 message HashIndexEntry {
-    int32 size = 1;
-    bytes hash = 2;
+    bytes hash = 1;
 }
 
 message FillIndexEntry {
-    int32 size = 1;
-    int32 byte = 2;
+    int32 byte = 1;
 }
 
 message IndexResponseHeader {

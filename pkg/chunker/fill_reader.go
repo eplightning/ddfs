@@ -44,10 +44,10 @@ func (reader *fillReader) has() bool {
 	return len(reader.chunks) > 0
 }
 
-func (reader *fillReader) pop() FillChunk {
+func (reader *fillReader) pop() *FillChunk {
 	a := reader.chunks[0]
 	reader.chunks = reader.chunks[1:]
-	return a
+	return &a
 }
 
 func (reader *fillReader) readAndDetect(p []byte) (n int, err error) {

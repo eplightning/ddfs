@@ -20,20 +20,20 @@ type Chunk interface {
 // Chunker chunks data
 type Chunker interface {
 	NextChunk() (Chunk, error)
-	Reset(reader io.Reader)
+	Reset(io.Reader)
 }
 
-func NewRawChunk(raw []byte) RawChunk {
-	return RawChunk{
+func NewRawChunk(raw []byte) *RawChunk {
+	return &RawChunk{
 		Raw: raw,
 	}
 }
 
-func (chunk RawChunk) Bytes() []byte {
+func (chunk *RawChunk) Bytes() []byte {
 	return chunk.Raw
 }
 
-func (chunk FillChunk) Bytes() []byte {
+func (chunk *FillChunk) Bytes() []byte {
 	output := make([]byte, chunk.Size)
 
 	for i := 0; i < chunk.Size; i++ {

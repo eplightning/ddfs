@@ -62,12 +62,22 @@ message BlockPutRequest {
     }
 }
 
+
 message BlockPutResponse {
     BlockResponseHeader header = 1;
 }
 
 message BlockMetadata {
     int32 references = 1;
+}
+
+message BlockReservations {
+    map<string, BlockReservation> reservations = 1;
+}
+
+message BlockReservation {
+    repeated bytes hashes = 1;
+    repeated int32 missing_blocks = 2;
 }
 
 message BlockResponseHeader {
