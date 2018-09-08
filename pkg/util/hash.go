@@ -1,12 +1,11 @@
-package utils
+package util
 
 import (
 	"encoding/hex"
 )
 
 type BlockHash struct {
-	Bytes []byte
-
+	Bytes      []byte
 	stringRepr string
 }
 
