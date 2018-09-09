@@ -2,27 +2,28 @@ package block
 
 import (
 	"sync"
+
 	"git.eplight.org/eplightning/ddfs/pkg/api"
 	"git.eplight.org/eplightning/ddfs/pkg/util"
 	"github.com/dgraph-io/badger"
 	"github.com/golang/protobuf/proto"
-	"github.com/pkg/errors"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 )
 
 type ReservationManager struct {
-	db *badger.DB
+	db           *badger.DB
 	reservations *api.BlockReservations
-	meta *MetadataManager
-	key []byte
-	mutex sync.Mutex
+	meta         *MetadataManager
+	key          []byte
+	mutex        sync.Mutex
 }
 
 func NewReservationManager(db *badger.DB, meta *MetadataManager) *ReservationManager {
 	manager := &ReservationManager{
-		db: db,
+		db:   db,
 		meta: meta,
-		key: []byte("reservations"),
+		key:  []byte("reservations"),
 	}
 	manager.load()
 
@@ -59,7 +60,7 @@ func (man *ReservationManager) Finish(id string) error {
 
 func (man *ReservationManager) Create(hashes [][]byte, missing []int32) (string, error) {
 	reservation := &api.BlockReservation{
-		Hashes: hashes,
+		Hashes:        hashes,
 		MissingBlocks: missing,
 	}
 	id := man.newID()
@@ -81,7 +82,7 @@ func (man *ReservationManager) load() {
 		if err != nil {
 			return err
 		}
-	
+
 		return proto.Unmarshal(value, man.reservations)
 	})
 

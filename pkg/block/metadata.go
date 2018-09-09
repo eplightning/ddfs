@@ -3,8 +3,8 @@ package block
 import (
 	"git.eplight.org/eplightning/ddfs/pkg/api"
 	"github.com/dgraph-io/badger"
-	"github.com/hashicorp/golang-lru"
 	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 )
 

@@ -1,23 +1,24 @@
 package index
 
 import (
-	"sync"
 	"strconv"
+	"sync"
+
 	"git.eplight.org/eplightning/ddfs/pkg/api"
 	"github.com/dgraph-io/badger"
-	"github.com/hashicorp/golang-lru"
 	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 )
 
 type Shard struct {
-	db       *badger.DB
-	cache 	 *lru.ARCCache
-	settings ShardSettings
-	table    *api.IndexShard
-	tableKey []byte
+	db          *badger.DB
+	cache       *lru.ARCCache
+	settings    ShardSettings
+	table       *api.IndexShard
+	tableKey    []byte
 	slicePrefix string
-	mutex sync.Mutex
+	mutex       sync.Mutex
 }
 
 type RangeData struct {
@@ -35,11 +36,11 @@ type ShardSettings struct {
 
 func NewShard(settings ShardSettings, db *badger.DB, cache *lru.ARCCache) (*Shard, error) {
 	shard := &Shard{
-		db: db,
-		cache: cache,
-		settings: settings,
-		table: &api.IndexShard{},
-		tableKey: []byte("shards/" + settings.ID),
+		db:          db,
+		cache:       cache,
+		settings:    settings,
+		table:       &api.IndexShard{},
+		tableKey:    []byte("shards/" + settings.ID),
 		slicePrefix: "slices/" + settings.ID + "/",
 	}
 
@@ -85,7 +86,7 @@ func (shard *Shard) GetRange(start, end int64) (*RangeData, error) {
 		end = start + sliceRight
 		start += sliceLeft
 
-		for _, middleSlice := range slices[1:len(slices)-1] {
+		for _, middleSlice := range slices[1 : len(slices)-1] {
 			middleEntries, _, sliceRight := shard.findEntries(middleSlice, 0, -1, false, false)
 			entries = append(entries, middleEntries...)
 			end += sliceRight
@@ -97,9 +98,9 @@ func (shard *Shard) GetRange(start, end int64) (*RangeData, error) {
 	}
 
 	return &RangeData{
-		End: end,
+		End:     end,
 		Entries: entries,
-		Start: start,
+		Start:   start,
 	}, nil
 }
 
@@ -128,7 +129,7 @@ func (shard *Shard) putRangeTx(data RangeData, txn *badger.Txn, ids []int64, off
 
 	if len(ids) == 1 {
 		entries, _, _ = shard.findEntries(slice, offLeft, offRight, true, false)
-		rightEntries, _, _ =  shard.findEntries(slice, offLeft, offRight, false, true)
+		rightEntries, _, _ = shard.findEntries(slice, offLeft, offRight, false, true)
 	} else {
 		entries, _, _ = shard.findEntries(slice, offLeft, -1, true, false)
 		slice, err := shard.slice(ids[len(ids)-1], txn)
@@ -136,15 +137,15 @@ func (shard *Shard) putRangeTx(data RangeData, txn *badger.Txn, ids []int64, off
 			return err
 		}
 
-		rightEntries, _, _ =  shard.findEntries(slice, 0, offRight, false, true)
+		rightEntries, _, _ = shard.findEntries(slice, 0, offRight, false, true)
 	}
 
 	entries = append(entries, data.Entries...)
 	entries = append(entries, rightEntries...)
 
 	allSlices := len(entries) / int(shard.settings.SliceSize)
-	slices := make([]*api.IndexSlice, allSlices + 1)
-	locations := make([]*api.IndexSliceLocation, allSlices + 1)
+	slices := make([]*api.IndexSlice, allSlices+1)
+	locations := make([]*api.IndexSliceLocation, allSlices+1)
 
 	currentLeft := left
 	currentChunk := 0
@@ -166,7 +167,7 @@ func (shard *Shard) putRangeTx(data RangeData, txn *badger.Txn, ids []int64, off
 				Entries: make([]*api.IndexEntry, 0, capacity),
 			}
 			locations[currentSlice] = &api.IndexSliceLocation{
-				Id: shard.table.SliceCounter,
+				Id:    shard.table.SliceCounter,
 				Start: currentLeft,
 			}
 			shard.table.SliceCounter++
@@ -185,7 +186,7 @@ func (shard *Shard) putRangeTx(data RangeData, txn *badger.Txn, ids []int64, off
 		}
 	}
 
-	newIndex := make([]*api.IndexSliceLocation, 0, len(shard.table.Slices) - len(ids) + len(locations))
+	newIndex := make([]*api.IndexSliceLocation, 0, len(shard.table.Slices)-len(ids)+len(locations))
 	copied := false
 
 	for _, location := range shard.table.Slices {
@@ -216,7 +217,7 @@ func (shard *Shard) sliceIndex(start, end int64) ([]int64, int64, int64, int64, 
 	if start >= end || end > shard.settings.Size {
 		return nil, 0, 0, 0, 0, errors.New("invalid start and end parameters")
 	}
-	
+
 	slices := make([]int64, 0, 1)
 
 	var lastOffset, firstOffset, sliceStart, sliceEnd int64
@@ -245,12 +246,12 @@ func (shard *Shard) sliceIndex(start, end int64) ([]int64, int64, int64, int64, 
 	if len(slices) == 0 {
 		return nil, 0, 0, 0, 0, errors.New("could not find any slices")
 	}
-	
+
 	return slices, firstOffset, lastOffset, sliceStart, sliceEnd, nil
 }
 
 func (shard *Shard) findEntries(slice *api.IndexSlice, start, end int64, before bool, after bool) ([]*api.IndexEntry, int64, int64) {
-	entries := make([]*api.IndexEntry, 0, len(slice.Entries) / 2)
+	entries := make([]*api.IndexEntry, 0, len(slice.Entries)/2)
 
 	var offset, lastOffset, firstOffset, prevOffset int64
 	firstFound := false
@@ -322,9 +323,9 @@ func (shard *Shard) createTable() error {
 		shard.table.SliceCounter = 1
 
 		shard.table.Slices[0] = &api.IndexSliceLocation{
-			Id: 0,
+			Id:    0,
 			Start: 0,
-			End: shard.settings.Size,
+			End:   shard.settings.Size,
 		}
 
 		slice := &api.IndexSlice{
@@ -383,7 +384,7 @@ func (shard *Shard) updateSlice(id int64, slice *api.IndexSlice, txn *badger.Txn
 
 func (shard *Shard) discardSlice(id int64, txn *badger.Txn) error {
 	key := shard.sliceKey(id)
-	
+
 	if err := txn.Delete(key); err != nil {
 		return errors.Wrap(err, "error while discarding slice")
 	}
