@@ -12,24 +12,13 @@ import (
 	"github.com/rs/zerolog/log"
 	"go.etcd.io/etcd/clientv3"
 	"go.etcd.io/etcd/clientv3/namespace"
+	"go.etcd.io/etcd/mvcc/mvccpb"
 )
 
 type EtcdManager struct {
 	servers []string
 	prefix  string
 	client  *clientv3.Client
-	kv      clientv3.KV
-	state   clusterState
-}
-
-type clusterState struct {
-	volumes  map[string]clusterVolume
-	startRev int64
-}
-
-type clusterVolume struct {
-	data     *api.Volume
-	revision int64
 }
 
 func NewEtcdManager(servers []string, prefix string) *EtcdManager {
@@ -50,6 +39,8 @@ func (m *EtcdManager) Init() error {
 
 	m.client = cl
 	m.client.KV = namespace.NewKV(m.client.KV, m.prefix)
+	m.client.Watcher = namespace.NewWatcher(m.client.Watcher, m.prefix)
+	m.client.Lease = namespace.NewLease(m.client.Lease, m.prefix)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -67,12 +58,6 @@ func (m *EtcdManager) Init() error {
 		}
 	}
 
-	state, err := m.loadMonitor(ctx)
-	if err != nil {
-		return err
-	}
-
-	m.state = *state
 	return nil
 }
 
@@ -81,13 +66,7 @@ func (m *EtcdManager) Start(ctl *util.SubsystemControl) {
 	go func() {
 		defer ctl.WaitGroup.Done()
 		defer m.client.Close()
-
-		for {
-			select {
-			case <-ctl.Stop:
-				return
-			}
-		}
+		<-ctl.Stop
 	}()
 }
 
@@ -101,13 +80,188 @@ func (m *EtcdManager) ClientSettings(ctx context.Context) (*api.ClientSettings, 
 	return output, rev, nil
 }
 
+func (m *EtcdManager) ServerSettings(ctx context.Context) (*api.ServerSettings, int64, error) {
+	output := &api.ServerSettings{}
+	rev, err := m.fetchAndUnmarshal(ctx, "settings/server", output)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return output, rev, nil
+}
+
+func (m *EtcdManager) BlockStores(ctx context.Context) (*api.NodeReplicaSets, int64, error) {
+	output := &api.NodeReplicaSets{}
+	rev, err := m.fetchAndUnmarshal(ctx, "nodes/block", output)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return output, rev, nil
+}
+
+func (m *EtcdManager) IndexStores(ctx context.Context) (*api.NodeReplicaSets, int64, error) {
+	output := &api.NodeReplicaSets{}
+	rev, err := m.fetchAndUnmarshal(ctx, "nodes/index", output)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return output, rev, nil
+}
+
+func (m *EtcdManager) Volumes(ctx context.Context) ([]*api.Volume, int64, error) {
+	resp, err := m.client.Get(ctx, "volumes/", clientv3.WithPrefix())
+	if err != nil {
+		return nil, 0, err
+	}
+
+	volumes := make([]*api.Volume, len(resp.Kvs))
+	var revision int64
+
+	for i, key := range resp.Kvs {
+		if key.ModRevision > revision {
+			revision = key.ModRevision
+		}
+
+		volumes[i] = &api.Volume{}
+		err := proto.Unmarshal(key.Value, volumes[i])
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+
+	return volumes, revision, nil
+}
+
+func (m *EtcdManager) WatchVolumes(ctx context.Context, start int64) chan []*api.Volume {
+	output := make(chan []*api.Volume, 100)
+
+	go func() {
+		events := m.client.Watch(ctx, "volumes/", clientv3.WithPrefix(), clientv3.WithRev(start))
+		for ev := range events {
+			outputEvents := make([]*api.Volume, 0, len(ev.Events))
+
+			for _, e := range ev.Events {
+				decoded := &api.Volume{}
+				err := proto.Unmarshal(e.Kv.Value, decoded)
+				if err == nil {
+					if e.Type == mvccpb.DELETE {
+						decoded.State = api.VolumeState_DELETED
+					}
+					outputEvents = append(outputEvents, decoded)
+				}
+			}
+
+			output <- outputEvents
+		}
+
+		close(output)
+	}()
+
+	return output
+}
+
+func (m *EtcdManager) ModifyVolume(ctx context.Context, name string, shards int64) error {
+	// TODO: transactions or mutex
+	key := "volumes/" + name
+	resp, err := m.client.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	var vol *api.Volume
+
+	if len(resp.Kvs) == 0 {
+		if shards <= 0 {
+			return nil
+		}
+
+		vol = &api.Volume{
+			Name:            name,
+			RequestedShards: shards,
+			Shards:          0,
+			State:           api.VolumeState_RESIZING,
+		}
+	} else {
+		vol = &api.Volume{}
+		err = proto.Unmarshal(resp.Kvs[0].Value, vol)
+		if err != nil {
+			return err
+		}
+
+		if shards == vol.RequestedShards {
+			return nil
+		}
+
+		vol.RequestedShards = shards
+		vol.State = api.VolumeState_RESIZING
+	}
+
+	bytes, err := proto.Marshal(vol)
+	if err != nil {
+		return err
+	}
+	_, err = m.client.Put(ctx, key, string(bytes))
+	return err
+}
+
+func (m *EtcdManager) UpdateVolumeShards(ctx context.Context, name string, added []int64, removed []int64) error {
+	// TODO: transactions or mutex
+	key := "volumes/" + name
+	resp, err := m.client.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+	if len(resp.Kvs) == 0 {
+		return errors.New("volume not found")
+	}
+
+	vol := &api.Volume{}
+	err = proto.Unmarshal(resp.Kvs[0].Value, vol)
+	if err != nil {
+		return err
+	}
+
+	currentShardsMap := make(map[int64]bool)
+	for _, v := range vol.CurrentShards {
+		currentShardsMap[v] = true
+	}
+	for _, v := range added {
+		currentShardsMap[v] = true
+	}
+	for _, v := range removed {
+		delete(currentShardsMap, v)
+	}
+	currentShards := make([]int64, 0, len(currentShardsMap))
+	for shard := range currentShardsMap {
+		currentShards = append(currentShards, shard)
+	}
+
+	vol.CurrentShards = currentShards
+	vol.Shards = int64(len(currentShards))
+
+	if vol.Shards == vol.RequestedShards {
+		vol.State = api.VolumeState_READY
+	} else {
+		vol.State = api.VolumeState_RESIZING
+	}
+
+	bytes, err := proto.Marshal(vol)
+	if err != nil {
+		return err
+	}
+	_, err = m.client.Put(ctx, key, string(bytes))
+	return err
+}
+
 func (m *EtcdManager) fetchAndUnmarshal(ctx context.Context, key string, msg proto.Message) (int64, error) {
 	resp, err := m.client.Get(ctx, key)
 	if err != nil {
 		return 0, err
 	}
 	if len(resp.Kvs) == 0 {
-		return 0, errors.New("no client settings key")
+		return 0, errors.New("key not found")
 	}
 
 	err = proto.Unmarshal(resp.Kvs[0].Value, msg)
@@ -170,7 +324,7 @@ func (m *EtcdManager) initMonitor(ctx context.Context) error {
 		Name:            "first",
 		RequestedShards: 1,
 		Shards:          0,
-		State:           api.VolumeState_NEW,
+		State:           api.VolumeState_RESIZING,
 	}
 
 	data := make(map[string]interface{})
@@ -193,29 +347,4 @@ func (m *EtcdManager) initMonitor(ctx context.Context) error {
 
 	_, err := m.client.Put(ctx, "init", "true")
 	return err
-}
-
-func (m *EtcdManager) loadMonitor(ctx context.Context) (*clusterState, error) {
-	state := &clusterState{
-		volumes: make(map[string]clusterVolume),
-	}
-
-	resp, err := m.client.Get(ctx, "volumes/", clientv3.WithPrefix())
-	if err != nil {
-		return nil, err
-	}
-	state.startRev = resp.Header.Revision
-
-	for _, key := range resp.Kvs {
-		v := clusterVolume{data: &api.Volume{}, revision: key.ModRevision}
-		err := proto.Unmarshal(key.Value, v.data)
-		if err != nil {
-			return nil, err
-		}
-
-		state.volumes[v.data.Name] = v
-		log.Info().Msgf("Loaded volume %v", v.data.Name)
-	}
-
-	return state, nil
 }

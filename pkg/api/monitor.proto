@@ -15,10 +15,8 @@ service Nodes {
 
 service Volumes {
     rpc Get (GetVolumesRequest) returns (GetVolumesResponse) {}
-    rpc Create (CreateVolumeRequest) returns (CreateVolumeResponse) {}
-    rpc Delete (DeleteVolumeRequest) returns (DeleteVolumeResponse) {}
+    rpc Modify (ModifyVolumeRequest) returns (ModifyVolumeResponse) {}
     rpc Watch (stream WatchVolumesRequest) returns (stream WatchVolumesResponse) {}
-    // TODO: resize
 
     rpc UpdateShards (UpdateShardsRequest) returns (UpdateShardsResponse) {}
 }
@@ -134,20 +132,12 @@ message GetVolumesResponse {
     repeated Volume volumes = 2;
 }
 
-message CreateVolumeRequest {
+message ModifyVolumeRequest {
     string name = 1;
     int64 shards = 2;
 }
 
-message CreateVolumeResponse {
-    MonitorResponseHeader header = 1;
-}
-
-message DeleteVolumeRequest {
-    string name = 1;
-}
-
-message DeleteVolumeResponse {
+message ModifyVolumeResponse {
     MonitorResponseHeader header = 1;
 }
 
@@ -156,7 +146,7 @@ message WatchVolumesRequest {
 }
 
 message WatchVolumesResponse {
-    WatchResponseHeader header = 1;
+    MonitorResponseHeader header = 1;
     repeated Volume volumes = 2;
 }
 
@@ -171,11 +161,9 @@ message UpdateShardsResponse {
 }
 
 enum VolumeState {
-    NEW = 0;
-    CREATED = 1;
-    RESIZING = 2;
-    DELETING = 3;
-    DELETED = 4;
+    RESIZING = 0;
+    READY = 1;
+    DELETED = 2;
 }
 
 message Volume {
@@ -199,11 +187,4 @@ message MonitorResponseHeader {
 message WatchRequestHeader {
     int64 start_revision = 1;
     bool end = 2;
-}
-
-message WatchResponseHeader {
-    bool created = 1;
-    bool canceled = 2;
-    bool error = 3;
-    string error_msg = 4;
 }

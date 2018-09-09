@@ -45,6 +45,6 @@ func (s *GrpcServer) Start(ctl *SubsystemControl) {
 	go func() {
 		defer ctl.WaitGroup.Done()
 		<-ctl.Stop
-		s.Server.GracefulStop()
+		s.Server.Stop()
 	}()
 }

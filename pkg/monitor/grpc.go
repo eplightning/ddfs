@@ -27,35 +27,96 @@ func (s *MonitorGrpc) GetClientSettings(ctx context.Context, r *api.ClientSettin
 }
 
 func (s *MonitorGrpc) GetServerSettings(ctx context.Context, r *api.ServerSettingsRequest) (*api.ServerSettingsResponse, error) {
-	return nil, nil
-}
+	result, rev, err := s.etcd.ServerSettings(ctx)
 
-func (s *MonitorGrpc) Get(ctx context.Context, r *api.GetVolumesRequest) (*api.GetVolumesResponse, error) {
-	return nil, nil
-}
-
-func (s *MonitorGrpc) Create(ctx context.Context, r *api.CreateVolumeRequest) (*api.CreateVolumeResponse, error) {
-	return nil, nil
-}
-
-func (s *MonitorGrpc) Delete(ctx context.Context, r *api.DeleteVolumeRequest) (*api.DeleteVolumeResponse, error) {
-	return nil, nil
-}
-
-func (s *MonitorGrpc) Watch(stream api.Volumes_WatchServer) error {
-	return nil
-}
-
-func (s *MonitorGrpc) UpdateShards(ctx context.Context, r *api.UpdateShardsRequest) (*api.UpdateShardsResponse, error) {
-	return nil, nil
+	response := &api.ServerSettingsResponse{
+		Header:   s.buildHeader(err, rev),
+		Settings: result,
+	}
+	return response, nil
 }
 
 func (s *MonitorGrpc) GetBlockStores(ctx context.Context, r *api.GetBlockStoresRequest) (*api.GetBlockStoresResponse, error) {
-	return nil, nil
+	result, rev, err := s.etcd.BlockStores(ctx)
+
+	response := &api.GetBlockStoresResponse{
+		Header: s.buildHeader(err, rev),
+		Data:   result,
+	}
+	return response, nil
 }
 
 func (s *MonitorGrpc) GetIndexStores(ctx context.Context, r *api.GetIndexStoresRequest) (*api.GetIndexStoresResponse, error) {
-	return nil, nil
+	result, rev, err := s.etcd.IndexStores(ctx)
+
+	response := &api.GetIndexStoresResponse{
+		Header: s.buildHeader(err, rev),
+		Data:   result,
+	}
+	return response, nil
+}
+
+func (s *MonitorGrpc) Get(ctx context.Context, r *api.GetVolumesRequest) (*api.GetVolumesResponse, error) {
+	result, rev, err := s.etcd.Volumes(ctx)
+
+	response := &api.GetVolumesResponse{
+		Header:  s.buildHeader(err, rev),
+		Volumes: result,
+	}
+
+	return response, nil
+}
+
+func (s *MonitorGrpc) Modify(ctx context.Context, r *api.ModifyVolumeRequest) (*api.ModifyVolumeResponse, error) {
+	err := s.etcd.ModifyVolume(ctx, r.Name, r.Shards)
+
+	response := &api.ModifyVolumeResponse{
+		Header: s.buildHeader(err, 0),
+	}
+
+	return response, nil
+}
+
+func (s *MonitorGrpc) UpdateShards(ctx context.Context, r *api.UpdateShardsRequest) (*api.UpdateShardsResponse, error) {
+	err := s.etcd.UpdateVolumeShards(ctx, r.VolumeName, r.AddedShards, r.RemovedShards)
+
+	response := &api.UpdateShardsResponse{
+		Header: s.buildHeader(err, 0),
+	}
+
+	return response, nil
+}
+
+func (s *MonitorGrpc) Watch(stream api.Volumes_WatchServer) error {
+	msg, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+	// ok?
+	if msg.Header.End {
+		return nil
+	}
+
+	watchContext, cancel := context.WithCancel(stream.Context())
+	defer cancel()
+	go func() {
+		defer cancel()
+		stream.Recv()
+	}()
+
+	watch := s.etcd.WatchVolumes(watchContext, msg.Header.StartRevision)
+
+	for w := range watch {
+		err = stream.Send(&api.WatchVolumesResponse{
+			Header:  s.buildHeader(nil, 0),
+			Volumes: w,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *MonitorGrpc) buildHeader(err error, rev int64) *api.MonitorResponseHeader {
