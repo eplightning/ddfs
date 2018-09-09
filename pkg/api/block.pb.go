@@ -1872,6 +1872,9 @@ func encodeVarintBlock(dAtA []byte, offset int, v uint64) int {
 	return offset + 1
 }
 func (m *BlockGetRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if len(m.Hashes) > 0 {
@@ -1887,6 +1890,9 @@ func (m *BlockGetRequest) Size() (n int) {
 }
 
 func (m *BlockGetResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Msg != nil {
@@ -1899,6 +1905,9 @@ func (m *BlockGetResponse) Size() (n int) {
 }
 
 func (m *BlockGetResponse_Info_) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Info != nil {
@@ -1908,6 +1917,9 @@ func (m *BlockGetResponse_Info_) Size() (n int) {
 	return n
 }
 func (m *BlockGetResponse_Data_) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Data != nil {
@@ -1917,6 +1929,9 @@ func (m *BlockGetResponse_Data_) Size() (n int) {
 	return n
 }
 func (m *BlockGetResponse_Info) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Header != nil {
@@ -1930,6 +1945,9 @@ func (m *BlockGetResponse_Info) Size() (n int) {
 }
 
 func (m *BlockGetResponse_Data) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if len(m.Blocks) > 0 {
@@ -1945,6 +1963,9 @@ func (m *BlockGetResponse_Data) Size() (n int) {
 }
 
 func (m *BlockDeleteRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if len(m.Hashes) > 0 {
@@ -1960,6 +1981,9 @@ func (m *BlockDeleteRequest) Size() (n int) {
 }
 
 func (m *BlockDeleteResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Header != nil {
@@ -1973,6 +1997,9 @@ func (m *BlockDeleteResponse) Size() (n int) {
 }
 
 func (m *BlockReserveRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if len(m.Hashes) > 0 {
@@ -1988,6 +2015,9 @@ func (m *BlockReserveRequest) Size() (n int) {
 }
 
 func (m *BlockReserveResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Header != nil {
@@ -2012,6 +2042,9 @@ func (m *BlockReserveResponse) Size() (n int) {
 }
 
 func (m *BlockPutRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Msg != nil {
@@ -2024,6 +2057,9 @@ func (m *BlockPutRequest) Size() (n int) {
 }
 
 func (m *BlockPutRequest_Info_) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Info != nil {
@@ -2033,6 +2069,9 @@ func (m *BlockPutRequest_Info_) Size() (n int) {
 	return n
 }
 func (m *BlockPutRequest_Data_) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Data != nil {
@@ -2042,6 +2081,9 @@ func (m *BlockPutRequest_Data_) Size() (n int) {
 	return n
 }
 func (m *BlockPutRequest_Info) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	l = len(m.ReservationId)
@@ -2055,6 +2097,9 @@ func (m *BlockPutRequest_Info) Size() (n int) {
 }
 
 func (m *BlockPutRequest_Data) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if len(m.Blocks) > 0 {
@@ -2070,6 +2115,9 @@ func (m *BlockPutRequest_Data) Size() (n int) {
 }
 
 func (m *BlockPutResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Header != nil {
@@ -2083,6 +2131,9 @@ func (m *BlockPutResponse) Size() (n int) {
 }
 
 func (m *BlockMetadata) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.References != 0 {
@@ -2095,6 +2146,9 @@ func (m *BlockMetadata) Size() (n int) {
 }
 
 func (m *BlockReservations) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if len(m.Reservations) > 0 {
@@ -2117,6 +2171,9 @@ func (m *BlockReservations) Size() (n int) {
 }
 
 func (m *BlockReservation) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if len(m.Hashes) > 0 {
@@ -2139,6 +2196,9 @@ func (m *BlockReservation) Size() (n int) {
 }
 
 func (m *BlockResponseHeader) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Error != 0 {

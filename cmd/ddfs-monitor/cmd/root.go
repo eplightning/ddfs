@@ -3,6 +3,9 @@ package cmd
 import (
 	"os"
 
+	"git.eplight.org/eplightning/ddfs/pkg/api"
+	"git.eplight.org/eplightning/ddfs/pkg/monitor"
+
 	"git.eplight.org/eplightning/ddfs/pkg/util"
 	"github.com/spf13/viper"
 
@@ -10,18 +13,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const MonitorVersion = "0.1.0"
+
 var rootCmd = &cobra.Command{
-	Use: "monitor",
-	Run: runServer,
+	Use:     "ddfs-monitor",
+	Run:     runServer,
+	Version: MonitorVersion,
 }
 
 func init() {
 	rootCmd.PersistentFlags().StringSlice("etcd-servers", []string{"localhost:2379"}, "etcd endpoints")
-	rootCmd.PersistentFlags().String("etcd-prefix", "ddfs", "etcd prefix")
+	rootCmd.PersistentFlags().String("etcd-prefix", "ddfs/", "etcd prefix")
+	rootCmd.PersistentFlags().String("listen", ":7300", "gRPC server listen address")
 	viper.BindPFlag("etcdServers", rootCmd.PersistentFlags().Lookup("etcd-servers"))
 	viper.BindPFlag("etcdPrefix", rootCmd.PersistentFlags().Lookup("etcd-prefix"))
+	viper.BindPFlag("listen", rootCmd.PersistentFlags().Lookup("listen"))
 	viper.BindEnv("etcdServers", "ETCD_SERVERS")
 	viper.BindEnv("etcdPrefix", "ETCD_PREFIX")
+	viper.BindEnv("listen", "LISTEN")
 }
 
 func Execute() {
@@ -32,9 +41,17 @@ func Execute() {
 
 func runServer(cmd *cobra.Command, args []string) {
 	util.SetupLogging()
+	log.Info().Msgf("Starting ddfs monitor %v", MonitorVersion)
 
-	log.Info().Msgf("Hello world %v", viper.GetStringSlice("etcdServers"))
+	etcd := monitor.NewEtcdManager(viper.GetStringSlice("etcdServers"), viper.GetString("etcdPrefix"))
+	srv := util.NewGrpcServer(viper.GetString("listen"))
 
-	stopCh, _ := util.SetupSignalHandler()
-	<-stopCh
+	util.InitSubsystems(etcd, srv)
+
+	service := monitor.NewMonitorGrpc(etcd)
+	api.RegisterNodesServer(srv.Server, service)
+	api.RegisterVolumesServer(srv.Server, service)
+	api.RegisterSettingsServer(srv.Server, service)
+
+	util.StartSubsystems(etcd, srv)
 }

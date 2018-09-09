@@ -94,7 +94,7 @@ message GetBlockStoresRequest {
 
 message GetBlockStoresResponse {
     MonitorResponseHeader header = 1;
-    repeated NodeReplicaSet nodes = 2;
+    NodeReplicaSets data = 2;
 }
 
 message GetIndexStoresRequest {
@@ -103,7 +103,11 @@ message GetIndexStoresRequest {
 
 message GetIndexStoresResponse {
     MonitorResponseHeader header = 1;
-    repeated NodeReplicaSet nodes = 2;
+    NodeReplicaSets data = 2;
+}
+
+message NodeReplicaSets {
+    repeated NodeReplicaSet sets = 1;
 }
 
 message NodeReplicaSet {

@@ -1945,6 +1945,9 @@ func encodeVarintIndex(dAtA []byte, offset int, v uint64) int {
 	return offset + 1
 }
 func (m *IndexGetRangeRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	l = len(m.Shard)
@@ -1964,6 +1967,9 @@ func (m *IndexGetRangeRequest) Size() (n int) {
 }
 
 func (m *IndexGetRangeResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Msg != nil {
@@ -1976,6 +1982,9 @@ func (m *IndexGetRangeResponse) Size() (n int) {
 }
 
 func (m *IndexGetRangeResponse_Info_) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Info != nil {
@@ -1985,6 +1994,9 @@ func (m *IndexGetRangeResponse_Info_) Size() (n int) {
 	return n
 }
 func (m *IndexGetRangeResponse_Data_) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Data != nil {
@@ -1994,6 +2006,9 @@ func (m *IndexGetRangeResponse_Data_) Size() (n int) {
 	return n
 }
 func (m *IndexGetRangeResponse_Info) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Header != nil {
@@ -2013,6 +2028,9 @@ func (m *IndexGetRangeResponse_Info) Size() (n int) {
 }
 
 func (m *IndexGetRangeResponse_Data) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Slice != nil {
@@ -2026,6 +2044,9 @@ func (m *IndexGetRangeResponse_Data) Size() (n int) {
 }
 
 func (m *IndexPutRangeRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Msg != nil {
@@ -2038,6 +2059,9 @@ func (m *IndexPutRangeRequest) Size() (n int) {
 }
 
 func (m *IndexPutRangeRequest_Info_) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Info != nil {
@@ -2047,6 +2071,9 @@ func (m *IndexPutRangeRequest_Info_) Size() (n int) {
 	return n
 }
 func (m *IndexPutRangeRequest_Data_) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Data != nil {
@@ -2056,6 +2083,9 @@ func (m *IndexPutRangeRequest_Data_) Size() (n int) {
 	return n
 }
 func (m *IndexPutRangeRequest_Info) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	l = len(m.Shard)
@@ -2078,6 +2108,9 @@ func (m *IndexPutRangeRequest_Info) Size() (n int) {
 }
 
 func (m *IndexPutRangeRequest_Data) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Slice != nil {
@@ -2091,6 +2124,9 @@ func (m *IndexPutRangeRequest_Data) Size() (n int) {
 }
 
 func (m *IndexPutRangeResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Header != nil {
@@ -2104,6 +2140,9 @@ func (m *IndexPutRangeResponse) Size() (n int) {
 }
 
 func (m *IndexShard) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Revision != 0 {
@@ -2125,6 +2164,9 @@ func (m *IndexShard) Size() (n int) {
 }
 
 func (m *IndexSliceLocation) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Start != 0 {
@@ -2143,6 +2185,9 @@ func (m *IndexSliceLocation) Size() (n int) {
 }
 
 func (m *IndexSlice) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if len(m.Entries) > 0 {
@@ -2158,6 +2203,9 @@ func (m *IndexSlice) Size() (n int) {
 }
 
 func (m *IndexEntry) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.BlockSize != 0 {
@@ -2173,6 +2221,9 @@ func (m *IndexEntry) Size() (n int) {
 }
 
 func (m *IndexEntry_Hash) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Hash != nil {
@@ -2182,6 +2233,9 @@ func (m *IndexEntry_Hash) Size() (n int) {
 	return n
 }
 func (m *IndexEntry_Fill) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Fill != nil {
@@ -2191,6 +2245,9 @@ func (m *IndexEntry_Fill) Size() (n int) {
 	return n
 }
 func (m *HashIndexEntry) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	l = len(m.Hash)
@@ -2204,6 +2261,9 @@ func (m *HashIndexEntry) Size() (n int) {
 }
 
 func (m *FillIndexEntry) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Byte != 0 {
@@ -2216,6 +2276,9 @@ func (m *FillIndexEntry) Size() (n int) {
 }
 
 func (m *IndexResponseHeader) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Revision != 0 {
