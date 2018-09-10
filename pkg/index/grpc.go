@@ -103,7 +103,8 @@ func (s *IndexGrpc) PutRange(stream api.IndexStore_PutRangeServer) error {
 	entries := make([]*api.IndexEntry, 0, 1)
 
 	for {
-		x, err := stream.Recv()
+		var x *api.IndexPutRangeRequest
+		x, err = stream.Recv()
 		if err != nil {
 			break
 		}
