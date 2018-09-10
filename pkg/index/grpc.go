@@ -1,6 +1,11 @@
 package index
 
-import "git.eplight.org/eplightning/ddfs/pkg/api"
+import (
+	"io"
+
+	"git.eplight.org/eplightning/ddfs/pkg/api"
+	"github.com/pkg/errors"
+)
 
 type IndexGrpc struct {
 	shards *ShardManager
@@ -54,23 +59,77 @@ func (s *IndexGrpc) GetRange(r *api.IndexGetRangeRequest, stream api.IndexStore_
 		return err
 	}
 
-	// TODO: slice it up
-	err = stream.Send(&api.IndexGetRangeResponse{
-		Msg: &api.IndexGetRangeResponse_Data_{
-			Data: &api.IndexGetRangeResponse_Data{
-				Slice: &api.IndexSlice{
-					Entries: data.Entries,
+	for i := 0; i < len(data.Entries); {
+		pack := len(data.Entries) - i
+		if pack > 360000 {
+			pack = 360000
+		}
+
+		err = stream.Send(&api.IndexGetRangeResponse{
+			Msg: &api.IndexGetRangeResponse_Data_{
+				Data: &api.IndexGetRangeResponse_Data{
+					Slice: &api.IndexSlice{
+						Entries: data.Entries[i : i+pack],
+					},
 				},
 			},
-		},
-	})
+		})
+		if err != nil {
+			return err
+		}
+
+		i += pack
+	}
 
 	return err
 }
 
 func (s *IndexGrpc) PutRange(stream api.IndexStore_PutRangeServer) error {
-	// TODO: todo
-	return nil
+	first, err := stream.Recv()
+	if err != nil {
+		return s.sendPutResponse(err, stream)
+	}
+
+	firstMsg, ok := first.Msg.(*api.IndexPutRangeRequest_Info_)
+	if !ok {
+		return s.sendPutResponse(errors.New("invalid request sequence"), stream)
+	}
+
+	shard, err := s.shards.Shard(firstMsg.Info.Shard)
+	if err != nil {
+		return s.sendPutResponse(err, stream)
+	}
+
+	entries := make([]*api.IndexEntry, 0, 1)
+
+	for {
+		x, err := stream.Recv()
+		if err != nil {
+			break
+		}
+
+		dataMsg, ok := x.Msg.(*api.IndexPutRangeRequest_Data_)
+		if !ok {
+			err = errors.New("invalid request sequence")
+			break
+		}
+
+		entries = append(entries, dataMsg.Data.Slice.Entries...)
+	}
+	if err != io.EOF {
+		return s.sendPutResponse(err, stream)
+	}
+
+	err = shard.PutRange(RangeData{
+		Start:   firstMsg.Info.Start,
+		End:     firstMsg.Info.End,
+		Entries: entries,
+	})
+	if err != nil {
+		return s.sendPutResponse(err, stream)
+	}
+
+	return s.sendPutResponse(err, stream)
 }
 
 func (s *IndexGrpc) buildHeader(err error, rev int64) *api.IndexResponseHeader {
@@ -86,4 +145,10 @@ func (s *IndexGrpc) buildHeader(err error, rev int64) *api.IndexResponseHeader {
 		ErrorMsg: errMsg,
 		Revision: rev,
 	}
+}
+
+func (s *IndexGrpc) sendPutResponse(err error, stream api.IndexStore_PutRangeServer) error {
+	return stream.SendAndClose(&api.IndexPutRangeResponse{
+		Header: s.buildHeader(err, 0),
+	})
 }
