@@ -228,8 +228,13 @@ func (s *ShardManager) handleVolumeUpdate(vol *api.Volume) error {
 func (s *ShardManager) removeShard(name string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+	var err error
+	x, exists := s.shards[name]
+	if exists {
+		err = x.Discard()
+	}
 	delete(s.shards, name)
-	return nil
+	return err
 }
 
 func (s *ShardManager) loadShard(name string) (bool, error) {

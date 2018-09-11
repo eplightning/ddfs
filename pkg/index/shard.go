@@ -118,6 +118,19 @@ func (shard *Shard) PutRange(data RangeData) error {
 	})
 }
 
+func (shard *Shard) Discard() error {
+	shard.mutex.Lock()
+	defer shard.mutex.Unlock()
+	return shard.db.Update(func(txn *badger.Txn) error {
+		for _, slice := range shard.table.Slices {
+			shard.discardSlice(slice.Id, txn)
+		}
+
+		shard.table = nil
+		return txn.Delete(shard.tableKey)
+	})
+}
+
 func (shard *Shard) putRangeTx(data RangeData, txn *badger.Txn, ids []int64, offLeft, offRight, left, right int64) error {
 	var entries []*api.IndexEntry
 	var rightEntries []*api.IndexEntry

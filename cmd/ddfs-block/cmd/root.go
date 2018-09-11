@@ -25,8 +25,8 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.PersistentFlags().StringSlice("monitor-servers", []string{"localhost:7300"}, "monitor endpoints")
-	rootCmd.PersistentFlags().String("listen", ":7300", "gRPC server listen address")
-	rootCmd.PersistentFlags().String("data-path", "index-data", "where data should be stored")
+	rootCmd.PersistentFlags().String("listen", ":7301", "gRPC server listen address")
+	rootCmd.PersistentFlags().String("data-path", "block-data", "where data should be stored")
 	viper.BindPFlag("monitorServers", rootCmd.PersistentFlags().Lookup("monitor-servers"))
 	viper.BindPFlag("listen", rootCmd.PersistentFlags().Lookup("listen"))
 	viper.BindPFlag("dataPath", rootCmd.PersistentFlags().Lookup("data-path"))
