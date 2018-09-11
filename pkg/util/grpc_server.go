@@ -6,6 +6,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+const MaxMessageSize = 16 * 1024 * 1024
+
 type GrpcServer struct {
 	listen  net.Listener
 	Server  *grpc.Server
@@ -26,8 +28,8 @@ func (s *GrpcServer) Init() error {
 
 	s.listen = listen
 	s.Server = grpc.NewServer(
-		grpc.MaxRecvMsgSize(16*1024*1024),
-		grpc.MaxSendMsgSize(16*1024*1024),
+		grpc.MaxRecvMsgSize(MaxMessageSize),
+		grpc.MaxSendMsgSize(MaxMessageSize),
 	)
 	return nil
 }

@@ -21,9 +21,10 @@ type ReservationManager struct {
 
 func NewReservationManager(db *badger.DB, meta *MetadataManager) *ReservationManager {
 	manager := &ReservationManager{
-		db:   db,
-		meta: meta,
-		key:  []byte("reservations"),
+		db:           db,
+		meta:         meta,
+		key:          []byte("reservations"),
+		reservations: &api.BlockReservations{},
 	}
 	manager.load()
 

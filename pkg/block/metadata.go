@@ -17,16 +17,16 @@ type MetadataManager struct {
 	cache *lru.ARCCache
 }
 
-func NewMetadataManager(db *badger.DB, maxCacheEntries int) *MetadataManager {
+func NewMetadataManager(db *badger.DB, maxCacheEntries int) (*MetadataManager, error) {
 	cache, err := lru.NewARC(maxCacheEntries)
 	if err != nil {
-		panic("cannot create ARC cache")
+		return nil, err
 	}
 
 	return &MetadataManager{
 		db:    db,
 		cache: cache,
-	}
+	}, nil
 }
 
 func (meta *MetadataManager) Get(id Identifier) (*api.BlockMetadata, error) {
@@ -37,7 +37,18 @@ func (meta *MetadataManager) Get(id Identifier) (*api.BlockMetadata, error) {
 		data, err = meta.fetch(id.String(), txn)
 		return err
 	})
-	return data, nil
+	return data, err
+}
+
+func (meta *MetadataManager) GetReferences(id Identifier) (int32, error) {
+	result, err := meta.Get(id)
+	if err == badger.ErrKeyNotFound {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	return result.References, nil
 }
 
 func (meta *MetadataManager) IncReferences(id Identifier) error {
@@ -78,7 +89,7 @@ func (meta *MetadataManager) fetch(id string, txn *badger.Txn) (*api.BlockMetada
 
 	item, err := txn.Get(meta.key(id))
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not load meta")
+		return nil, err
 	}
 
 	value, err := item.Value()

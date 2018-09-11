@@ -7,16 +7,16 @@ type cachedStorage struct {
 	cache *lru.ARCCache
 }
 
-func NewCachedStorage(base Storage, maxEntries int) *cachedStorage {
+func NewCachedStorage(base Storage, maxEntries int) (*cachedStorage, error) {
 	cache, err := lru.NewARC(maxEntries)
 	if err != nil {
-		panic("cannot create ARC cache")
+		return nil, err
 	}
 
 	return &cachedStorage{
 		base:  base,
 		cache: cache,
-	}
+	}, nil
 }
 
 func (fs *cachedStorage) Retrieve(id Identifier) ([]byte, error) {

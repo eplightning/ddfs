@@ -53,11 +53,12 @@ func runServer(cmd *cobra.Command, args []string) {
 	log.Info().Msg("Connected to monitor server " + cc.Target())
 
 	srv := util.NewGrpcServer(viper.GetString("listen"))
+	manager := block.NewBlockManager(viper.GetString("dataPath"))
 
-	util.InitSubsystems(srv)
+	util.InitSubsystems(srv, manager)
 
-	service := block.NewBlockGrpc()
+	service := block.NewBlockGrpc(manager)
 	api.RegisterBlockStoreServer(srv.Server, service)
 
-	util.StartSubsystems(srv)
+	util.StartSubsystems(srv, manager)
 }
