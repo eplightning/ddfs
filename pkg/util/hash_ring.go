@@ -7,7 +7,7 @@ import (
 )
 
 type HashRing interface {
-	Block(hash BlockHash) *api.Node
+	Block(hash *BlockHash) *api.Node
 	Shard(shard string) *api.Node
 	Node(name string) *api.Node
 }
@@ -34,7 +34,7 @@ func NewHashRing(nodes *api.NodeReplicaSets) *KetamaRing {
 	}
 }
 
-func (ring *KetamaRing) Block(hash BlockHash) *api.Node {
+func (ring *KetamaRing) Block(hash *BlockHash) *api.Node {
 	result, ok := ring.base.GetNodePosFromKey(ring.base.KeyFromBytes(hash.Bytes))
 	if !ok {
 		return nil
