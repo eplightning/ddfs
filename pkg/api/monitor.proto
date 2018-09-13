@@ -36,8 +36,7 @@ message ClientSettingsResponse {
 
 enum HashAlgorithm {
     SHA256 = 0;
-    MURMURHASH3 = 1;
-    RIPEMD160 = 2;
+    BLAKE2B256 = 1;
 }
 
 message ClientSettings {
@@ -109,8 +108,7 @@ message NodeReplicaSets {
 }
 
 message NodeReplicaSet {
-    int64 slot = 1;
-    repeated Node nodes = 2;
+    repeated Node nodes = 1;
 }
 
 message Node {

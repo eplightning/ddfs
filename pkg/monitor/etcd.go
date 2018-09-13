@@ -241,17 +241,23 @@ func (m *EtcdManager) UpdateVolumeShards(ctx context.Context, name string, added
 	vol.CurrentShards = currentShards
 	vol.Shards = int64(len(currentShards))
 
-	if vol.Shards == vol.RequestedShards {
-		vol.State = api.VolumeState_READY
+	if vol.Shards == 0 && vol.RequestedShards == 0 {
+		_, err = m.client.Delete(ctx, key)
 	} else {
-		vol.State = api.VolumeState_RESIZING
+		if vol.Shards == vol.RequestedShards {
+			vol.State = api.VolumeState_READY
+		} else {
+			vol.State = api.VolumeState_RESIZING
+		}
+
+		var bytes []byte
+		bytes, err = proto.Marshal(vol)
+		if err != nil {
+			return err
+		}
+		_, err = m.client.Put(ctx, key, string(bytes))
 	}
 
-	bytes, err := proto.Marshal(vol)
-	if err != nil {
-		return err
-	}
-	_, err = m.client.Put(ctx, key, string(bytes))
 	return err
 }
 
@@ -300,7 +306,6 @@ func (m *EtcdManager) initMonitor(ctx context.Context) error {
 						Primary: true,
 					},
 				},
-				Slot: 0,
 			},
 		},
 	}
@@ -315,7 +320,6 @@ func (m *EtcdManager) initMonitor(ctx context.Context) error {
 						Primary: true,
 					},
 				},
-				Slot: 0,
 			},
 		},
 	}

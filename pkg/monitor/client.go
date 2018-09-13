@@ -1,6 +1,8 @@
 package monitor
 
 import (
+	"io"
+
 	"git.eplight.org/eplightning/ddfs/pkg/api"
 	"google.golang.org/grpc"
 )
@@ -9,12 +11,14 @@ type Client interface {
 	api.NodesClient
 	api.VolumesClient
 	api.SettingsClient
+	io.Closer
 }
 
 type CombinedClient struct {
 	api.NodesClient
 	api.VolumesClient
 	api.SettingsClient
+	io.Closer
 }
 
 func FromClientConn(cc *grpc.ClientConn) Client {
@@ -22,5 +26,6 @@ func FromClientConn(cc *grpc.ClientConn) Client {
 		NodesClient:    api.NewNodesClient(cc),
 		VolumesClient:  api.NewVolumesClient(cc),
 		SettingsClient: api.NewSettingsClient(cc),
+		Closer:         cc,
 	}
 }
