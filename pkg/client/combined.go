@@ -79,6 +79,9 @@ func (c *CombinedClient) Write(ctx context.Context, volume string, start, end in
 		return err
 	}
 
+	start = ranges[0].Start
+	end = ranges[len(ranges)-1].End
+
 	last := len(ranges) - 1
 	for i, shard := range ranges {
 		var prepend, appendE *api.IndexEntry

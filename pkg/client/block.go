@@ -356,15 +356,6 @@ func (cl *BlockClient) retrieveBlocks(ctx context.Context, node string, hashes [
 		return nil, err
 	}
 
-	firstMsg, err := stream.Recv()
-	if err != nil {
-		return nil, err
-	}
-	first, ok := firstMsg.Msg.(*api.BlockGetResponse_Info_)
-	if !ok || first.Info.Header.Error != 0 {
-		return nil, errors.New("invalid first message")
-	}
-
 	output := make(map[string][]byte)
 	var ptr int
 	for {
@@ -374,6 +365,12 @@ func (cl *BlockClient) retrieveBlocks(ctx context.Context, node string, hashes [
 		}
 		data, ok := dataMsg.Msg.(*api.BlockGetResponse_Data_)
 		if !ok {
+			info, ok := dataMsg.Msg.(*api.BlockGetResponse_Info_)
+			if ok {
+				if info.Info.Header.Error != 0 {
+					return nil, errors.New(info.Info.Header.ErrorMsg)
+				}
+			}
 			break
 		}
 		for _, b := range data.Data.Blocks {

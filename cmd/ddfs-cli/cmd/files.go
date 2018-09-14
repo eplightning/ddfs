@@ -86,6 +86,9 @@ func writeFile(cmd *cobra.Command, args []string) {
 		panicOnError(err)
 	}
 
-	err = combined.Write(ctx, args[0], viper.GetInt64("start"), viper.GetInt64("end"), read)
+	start := viper.GetInt64("start")
+	end := viper.GetInt64("end")
+
+	err = combined.Write(ctx, args[0], start, end, io.LimitReader(read, end-start))
 	panicOnError(err)
 }
