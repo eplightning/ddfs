@@ -16,15 +16,19 @@ import (
 )
 
 type EtcdManager struct {
-	servers []string
-	prefix  string
-	client  *clientv3.Client
+	servers        []string
+	prefix         string
+	client         *clientv3.Client
+	bootstrapFile  string
+	bootstrapForce bool
 }
 
-func NewEtcdManager(servers []string, prefix string) *EtcdManager {
+func NewEtcdManager(servers []string, prefix string, bootstrapFile string, bootstrapForce bool) *EtcdManager {
 	return &EtcdManager{
-		servers: servers,
-		prefix:  prefix,
+		servers:        servers,
+		prefix:         prefix,
+		bootstrapFile:  bootstrapFile,
+		bootstrapForce: bootstrapForce,
 	}
 }
 
@@ -50,9 +54,18 @@ func (m *EtcdManager) Init() error {
 		return err
 	}
 
-	if len(resp.Kvs) == 0 {
+	if len(resp.Kvs) == 0 || m.bootstrapForce {
 		log.Info().Msg("Initalizing new cluster")
-		err = m.initMonitor(ctx)
+		var bootstrapData BootstrapData
+		if m.bootstrapFile == "" {
+			bootstrapData = DefaultBootstrapData()
+		} else {
+			bootstrapData, err = LoadBootstrapFromFile(m.bootstrapFile)
+			if err != nil {
+				return err
+			}
+		}
+		err = m.initMonitor(ctx, bootstrapData)
 		if err != nil {
 			return err
 		}
@@ -278,50 +291,49 @@ func (m *EtcdManager) fetchAndUnmarshal(ctx context.Context, key string, msg pro
 	return resp.Kvs[0].ModRevision, nil
 }
 
-func (m *EtcdManager) initMonitor(ctx context.Context) error {
+func (m *EtcdManager) initMonitor(ctx context.Context, boot BootstrapData) error {
 	cs := &api.ClientSettings{
-		MinFillSize: 1024,
+		MinFillSize: boot.Settings.MinFillSize,
 		HashAlgo:    api.HashAlgorithm_SHA256,
 		ChunkAlgo: &api.ClientSettings_Rabin{
 			Rabin: &api.RabinChunkAlgorithm{
-				MaxSize: 4 * 1024 * 1024,
-				MinSize: 100 * 1024,
-				Poly:    12313278162312893,
+				MaxSize: boot.Settings.RabinMaxSize,
+				MinSize: boot.Settings.RabinMinSize,
+				Poly:    boot.Settings.RabinPoly,
 			},
 		},
 	}
 
 	ss := &api.ServerSettings{
-		ShardEntriesPerSlice: 1024,
-		ShardSize:            256 * 1024 * 1024 * 1024,
+		ShardEntriesPerSlice: boot.Settings.ShardEntriesPerSlice,
+		ShardSize:            boot.Settings.ShardSize,
 	}
 
-	blocks := &api.NodeReplicaSets{
-		Sets: []*api.NodeReplicaSet{
-			&api.NodeReplicaSet{
-				Nodes: []*api.Node{
-					&api.Node{
-						Address: "localhost:7301",
-						Name:    "first",
-						Primary: true,
-					},
+	blocks := &api.NodeReplicaSets{Sets: make([]*api.NodeReplicaSet, 0, 1)}
+	indices := &api.NodeReplicaSets{Sets: make([]*api.NodeReplicaSet, 0, 1)}
+
+	for _, block := range boot.Blocks {
+		blocks.Sets = append(blocks.Sets, &api.NodeReplicaSet{
+			Nodes: []*api.Node{
+				&api.Node{
+					Address: block.Address,
+					Name:    block.Name,
+					Primary: true,
 				},
 			},
-		},
+		})
 	}
 
-	indices := &api.NodeReplicaSets{
-		Sets: []*api.NodeReplicaSet{
-			&api.NodeReplicaSet{
-				Nodes: []*api.Node{
-					&api.Node{
-						Address: "localhost:7302",
-						Name:    "first",
-						Primary: true,
-					},
+	for _, idx := range boot.Indexes {
+		indices.Sets = append(indices.Sets, &api.NodeReplicaSet{
+			Nodes: []*api.Node{
+				&api.Node{
+					Address: idx.Address,
+					Name:    idx.Name,
+					Primary: true,
 				},
 			},
-		},
+		})
 	}
 
 	volume := &api.Volume{

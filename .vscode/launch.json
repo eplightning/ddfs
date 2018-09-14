@@ -2,6 +2,7 @@
     // Use IntelliSense to learn about possible attributes.
     // Hover to view descriptions of existing attributes.
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    // "file", "write", "first", "-f", "/tmp/test.txt", "--start", "100", "--end", "200"
     "version": "0.2.0",
     "configurations": [
         {
@@ -14,7 +15,7 @@
             "host": "127.0.0.1",
             "program": "${fileDirname}",
             "env": {},
-            "args": ["file", "write", "first", "-f", "/tmp/test.txt", "--start", "100", "--end", "200"],
+            "args": [],
             "showLog": false
         }
     ]

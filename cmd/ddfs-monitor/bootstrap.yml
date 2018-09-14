@@ -1,0 +1,19 @@
+settings:
+    shardEntriesPerSlice: 1024
+    shardSize: 67108864
+    minFillSize: 1000
+    chunker: rabin
+    rabinMaxSize: 4194304
+    rabinMinSize: 102400
+    rabinPoly: 12313278162312893
+blocks:
+    - name: first
+      address: localhost:7301
+    - name: second
+      address: localhost:7311
+indexes:
+    - name: first
+      address: localhost:7302
+    - name: second
+      address: localhost:7312
+
