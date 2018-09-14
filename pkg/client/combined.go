@@ -83,8 +83,11 @@ func (c *CombinedClient) Write(ctx context.Context, volume string, start, end in
 	end = ranges[len(ranges)-1].End
 
 	last := len(ranges) - 1
+	left := origStart
+	var prepend, appendE *api.IndexEntry
+
 	for i, shard := range ranges {
-		var prepend, appendE *api.IndexEntry
+		prepend, appendE = nil, nil
 		readers := make([]io.Reader, 0, 1)
 
 		if i == 0 && origStart > start {
@@ -103,14 +106,15 @@ func (c *CombinedClient) Write(ctx context.Context, volume string, start, end in
 					if err != nil {
 						return err
 					}
-					readers = append(readers, bytes.NewReader(data))
+					readers = append(readers, io.LimitReader(bytes.NewReader(data), origStart-start))
 				} else {
-					readers = append(readers, &IndexFillReader{Fill: byte(fill.Fill.Byte), Size: firstEntry.BlockSize})
+					readers = append(readers, io.LimitReader(&IndexFillReader{Fill: byte(fill.Fill.Byte), Size: firstEntry.BlockSize}, origStart-start))
 				}
 			}
 		}
 
-		readers = append(readers, io.LimitReader(source, shard.End-shard.Start))
+		readers = append(readers, io.LimitReader(source, shard.End-left))
+		left = shard.End
 
 		if i == last && end > origEnd {
 			lastSlice := shard.Slices[len(shard.Slices)-1]
@@ -129,9 +133,13 @@ func (c *CombinedClient) Write(ctx context.Context, volume string, start, end in
 					if err != nil {
 						return err
 					}
-					readers = append(readers, bytes.NewReader(data))
+					r := bytes.NewReader(data)
+					r.Seek(origEnd-end, io.SeekEnd)
+					readers = append(readers, r)
 				} else {
-					readers = append(readers, &IndexFillReader{Fill: byte(fill.Fill.Byte), Size: lastEntry.BlockSize})
+					r := &IndexFillReader{Fill: byte(fill.Fill.Byte), Size: lastEntry.BlockSize}
+					r.Seek(origEnd-end, io.SeekEnd)
+					readers = append(readers, r)
 				}
 			}
 		}
