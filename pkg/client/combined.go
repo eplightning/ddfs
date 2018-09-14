@@ -22,6 +22,54 @@ func NewCombinedClient(block *BlockClient, index *IndexClient) *CombinedClient {
 	}
 }
 
+func (c *CombinedClient) Read(ctx context.Context, volume string, start, end int64, dest io.Writer) error {
+	ranges, err := c.idx.GetRange(ctx, volume, start, end)
+	if err != nil {
+		return err
+	}
+
+	blocks, err := c.blk.GetBlocks(ctx, ranges)
+	if err != nil {
+		return err
+	}
+
+	skip := start - ranges[0].Start
+
+	readers := make([]io.Reader, 0, 100)
+	for _, idx := range ranges {
+		for _, x := range idx.Slices {
+			for _, entry := range x.Entries {
+				switch e := entry.Entry.(type) {
+				case *api.IndexEntry_Hash:
+					readers = append(readers, bytes.NewReader(
+						blocks[string(e.Hash.Hash)],
+					))
+				case *api.IndexEntry_Fill:
+					readers = append(readers, &IndexFillReader{
+						Fill: byte(e.Fill.Byte),
+						Size: entry.BlockSize,
+					})
+				}
+			}
+		}
+	}
+
+	if len(readers) == 0 {
+		return nil
+	}
+
+	if skip > 0 {
+		seeker := readers[0].(io.Seeker)
+		seeker.Seek(skip, io.SeekCurrent)
+	}
+
+	multi := io.MultiReader(readers...)
+	limited := io.LimitReader(multi, end-start)
+
+	_, err = io.Copy(dest, limited)
+	return err
+}
+
 func (c *CombinedClient) Write(ctx context.Context, volume string, start, end int64, source io.Reader) error {
 	origStart := start
 	origEnd := end

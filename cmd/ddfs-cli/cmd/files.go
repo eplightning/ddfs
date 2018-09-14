@@ -2,7 +2,8 @@ package cmd
 
 import (
 	"context"
-	"fmt"
+	"io"
+	"os"
 
 	"git.eplight.org/eplightning/ddfs/pkg/client"
 	"github.com/spf13/cobra"
@@ -59,11 +60,11 @@ func readFile(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
 	idx, err := client.NewIndexClient(ctx, mon)
 	panicOnError(err)
-	ranges, err := idx.GetRange(ctx, args[0], viper.GetInt64("start"), viper.GetInt64("end"))
-	for _, r := range ranges {
-		fmt.Printf("%v", r)
-	}
-	fmt.Printf("%v %v", ranges, err)
+	blk, err := client.NewBlockClient(ctx, mon)
+	panicOnError(err)
+	combined := client.NewCombinedClient(blk, idx)
+	err = combined.Read(ctx, args[0], viper.GetInt64("start"), viper.GetInt64("end"), os.Stdout)
+	panicOnError(err)
 }
 
 func writeFile(cmd *cobra.Command, args []string) {
@@ -74,9 +75,17 @@ func writeFile(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
 	idx, err := client.NewIndexClient(ctx, mon)
 	panicOnError(err)
-	ranges, err := idx.GetRange(ctx, args[0], viper.GetInt64("start"), viper.GetInt64("end"))
-	for _, r := range ranges {
-		fmt.Printf("%v", r)
+	blk, err := client.NewBlockClient(ctx, mon)
+	panicOnError(err)
+	combined := client.NewCombinedClient(blk, idx)
+
+	var read io.Reader = os.Stdin
+	file := viper.GetString("file")
+	if file != "" && file != "-" {
+		read, err = os.Open(file)
+		panicOnError(err)
 	}
-	fmt.Printf("%v %v", ranges, err)
+
+	err = combined.Write(ctx, args[0], viper.GetInt64("start"), viper.GetInt64("end"), read)
+	panicOnError(err)
 }

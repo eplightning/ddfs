@@ -29,12 +29,6 @@ type blockChunk struct {
 	chunks [][]byte
 }
 
-type BlockSlice struct {
-	Start  int64
-	End    int64
-	Slices []*api.IndexSlice
-}
-
 type reserveChunk struct {
 	node   string
 	chunks []*HashedData
@@ -104,13 +98,17 @@ func (cl *BlockClient) GetBlock(ctx context.Context, hash []byte) ([]byte, error
 	return x, nil
 }
 
-func (cl *BlockClient) GetBlocks(ctx context.Context, indices []*BlockSlice) (map[string][]byte, error) {
+func (cl *BlockClient) GetBlocks(ctx context.Context, indices []*RangeItem) (map[string][]byte, error) {
 	chunks, err := cl.splitWork(indices)
 	if err != nil {
 		return nil, err
 	}
 
 	output := make(map[string][]byte)
+	if len(chunks) == 0 {
+		return output, nil
+	}
+
 	mergeCh := make(chan map[string][]byte, 10)
 	mergeWait := make(chan struct{})
 
@@ -191,7 +189,7 @@ func (cl *BlockClient) splitWorkReserve(blocks []*HashedData) ([]*reserveChunk, 
 	return chunks, nil
 }
 
-func (cl *BlockClient) splitWork(indices []*BlockSlice) ([]*blockChunk, error) {
+func (cl *BlockClient) splitWork(indices []*RangeItem) ([]*blockChunk, error) {
 	// 400 000
 	byNode := make(map[string]([][]byte))
 	chunks := make([]*blockChunk, 0, 5000)
