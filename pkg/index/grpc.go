@@ -5,6 +5,7 @@ import (
 
 	"git.eplight.org/eplightning/ddfs/pkg/api"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 type IndexGrpc struct {
@@ -18,6 +19,7 @@ func NewIndexGrpc(shards *ShardManager) *IndexGrpc {
 }
 
 func (s *IndexGrpc) GetRange(r *api.IndexGetRangeRequest, stream api.IndexStore_GetRangeServer) error {
+	log.Info().Msgf("Get range request")
 	shard, err := s.shards.Shard(r.Shard)
 	if err != nil {
 		err = stream.Send(&api.IndexGetRangeResponse{
@@ -85,6 +87,7 @@ func (s *IndexGrpc) GetRange(r *api.IndexGetRangeRequest, stream api.IndexStore_
 }
 
 func (s *IndexGrpc) PutRange(stream api.IndexStore_PutRangeServer) error {
+	log.Info().Msgf("Put range request")
 	first, err := stream.Recv()
 	if err != nil {
 		return s.sendPutResponse(err, stream)

@@ -6,6 +6,7 @@ import (
 	"git.eplight.org/eplightning/ddfs/pkg/api"
 	"git.eplight.org/eplightning/ddfs/pkg/util"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 type BlockGrpc struct {
@@ -19,6 +20,7 @@ func NewBlockGrpc(block *BlockManager) *BlockGrpc {
 }
 
 func (s *BlockGrpc) Get(r *api.BlockGetRequest, stream api.BlockStore_GetServer) error {
+	log.Info().Msgf("Get request")
 	ch := s.block.GetChunked(r.Hashes, util.MaxMessageSize-4096)
 
 	for chunk := range ch {
@@ -32,6 +34,7 @@ func (s *BlockGrpc) Get(r *api.BlockGetRequest, stream api.BlockStore_GetServer)
 			})
 			return nil
 		}
+		log.Info().Msgf("Sent %v chunks", len(chunk))
 		err := stream.Send(&api.BlockGetResponse{
 			Msg: &api.BlockGetResponse_Data_{
 				Data: &api.BlockGetResponse_Data{
@@ -56,6 +59,7 @@ func (s *BlockGrpc) Get(r *api.BlockGetRequest, stream api.BlockStore_GetServer)
 }
 
 func (s *BlockGrpc) Put(stream api.BlockStore_PutServer) error {
+	log.Info().Msgf("Put request")
 	first, err := stream.Recv()
 	if err != nil {
 		return stream.SendAndClose(&api.BlockPutResponse{
@@ -102,7 +106,10 @@ func (s *BlockGrpc) Put(stream api.BlockStore_PutServer) error {
 }
 
 func (s *BlockGrpc) Reserve(ctx context.Context, r *api.BlockReserveRequest) (*api.BlockReserveResponse, error) {
+	log.Info().Msgf("Reserve request")
 	id, missing, err := s.block.Reserve(r.Hashes)
+	log.Info().Msgf("Missing blocks %v", len(missing))
+
 	return &api.BlockReserveResponse{
 		Header:        s.buildHeader(err),
 		MissingBlocks: missing,

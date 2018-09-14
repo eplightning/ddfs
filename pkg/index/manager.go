@@ -30,9 +30,11 @@ type ShardManager struct {
 	watch          chan *api.Volume
 	serverSettings *api.ServerSettings
 	volumeRevision int64
+	indexRing      util.HashRing
+	name           string
 }
 
-func NewShardManager(mon monitor.Client, cacheSize int, dataPath string) *ShardManager {
+func NewShardManager(mon monitor.Client, cacheSize int, dataPath string, name string) *ShardManager {
 	context, cancel := context.WithCancel(context.Background())
 
 	return &ShardManager{
@@ -42,6 +44,7 @@ func NewShardManager(mon monitor.Client, cacheSize int, dataPath string) *ShardM
 		dataPath:  dataPath,
 		context:   context,
 		cancel:    cancel,
+		name:      name,
 	}
 }
 
@@ -74,6 +77,12 @@ func (s *ShardManager) Init() error {
 		return err
 	}
 	s.serverSettings = ss.Settings
+
+	idxNodes, err := s.mon.GetIndexStores(context.TODO(), &api.GetIndexStoresRequest{})
+	if err != nil {
+		return err
+	}
+	s.indexRing = util.NewHashRing(idxNodes.Data)
 
 	resp, err := s.mon.Get(context.TODO(), &api.GetVolumesRequest{})
 	if err != nil {
@@ -186,8 +195,12 @@ func (s *ShardManager) handleVolumeUpdate(vol *api.Volume) error {
 		}
 	}
 	for _, x := range vol.CurrentShards {
+		if !s.myShard(vol.Name, x) {
+			continue
+		}
 		_, exists := shardsTodo[x]
 		name := s.shardName(vol.Name, x)
+
 		if exists {
 			delete(shardsTodo, x)
 			alreadyLoaded, _ := s.loadShard(name)
@@ -285,6 +298,10 @@ func (s *ShardManager) Shard(name string) (*Shard, error) {
 }
 
 func (s *ShardManager) myShard(volume string, id int64) bool {
+	node := s.indexRing.Shard(s.shardName(volume, id))
+	if node == nil || node.Name != s.name {
+		return false
+	}
 	return true
 }
 

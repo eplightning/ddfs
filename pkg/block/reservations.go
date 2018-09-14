@@ -92,6 +92,10 @@ func (man *ReservationManager) load() {
 			Reservations: make(map[string]*api.BlockReservation),
 		}
 	}
+
+	if man.reservations.Reservations == nil {
+		man.reservations.Reservations = make(map[string]*api.BlockReservation)
+	}
 }
 
 func (man *ReservationManager) persist() error {

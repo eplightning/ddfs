@@ -28,12 +28,15 @@ func init() {
 	rootCmd.PersistentFlags().StringSlice("monitor-servers", []string{"localhost:7300"}, "monitor endpoints")
 	rootCmd.PersistentFlags().String("listen", ":7302", "gRPC server listen address")
 	rootCmd.PersistentFlags().String("data-path", "index-data", "where data should be stored")
+	rootCmd.PersistentFlags().String("server-name", "first", "server name")
 	viper.BindPFlag("monitorServers", rootCmd.PersistentFlags().Lookup("monitor-servers"))
 	viper.BindPFlag("listen", rootCmd.PersistentFlags().Lookup("listen"))
 	viper.BindPFlag("dataPath", rootCmd.PersistentFlags().Lookup("data-path"))
+	viper.BindPFlag("serverName", rootCmd.PersistentFlags().Lookup("server-name"))
 	viper.BindEnv("monitorServers", "MONITOR_SERVERS")
 	viper.BindEnv("listen", "LISTEN")
 	viper.BindEnv("dataPath", "DATA_PATH")
+	viper.BindEnv("serverName", "SERVER_NAME")
 }
 
 func Execute() {
@@ -54,7 +57,7 @@ func runServer(cmd *cobra.Command, args []string) {
 	mon := monitor.FromClientConn(cc)
 	log.Info().Msg("Connected to monitor server " + cc.Target())
 
-	shards := index.NewShardManager(mon, 10*1024, viper.GetString("dataPath"))
+	shards := index.NewShardManager(mon, 10*1024, viper.GetString("dataPath"), viper.GetString("serverName"))
 	srv := util.NewGrpcServer(viper.GetString("listen"))
 
 	util.InitSubsystems(shards, srv)
