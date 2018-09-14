@@ -8,12 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"gopkg.in/tomb.v2"
-
 	"git.eplight.org/eplightning/ddfs/pkg/api"
 	"git.eplight.org/eplightning/ddfs/pkg/monitor"
 	"git.eplight.org/eplightning/ddfs/pkg/util"
 	"google.golang.org/grpc"
+	tomb "gopkg.in/tomb.v2"
 )
 
 type grpcIndexClientConnection struct {
@@ -27,14 +26,14 @@ type shardBoundary struct {
 	Index int
 }
 
-type RangeSingle struct {
+type RangeResponse struct {
+	Ranges []*RangeItem
+}
+
+type RangeItem struct {
 	Start  int64
 	End    int64
 	Slices []*api.IndexSlice
-}
-
-type RangeResponse struct {
-	Ranges []*RangeSingle
 }
 
 type IndexClient struct {
@@ -67,11 +66,11 @@ func NewIndexClient(ctx context.Context, mon monitor.Client) (*IndexClient, erro
 	}, nil
 }
 
-func (cl *IndexClient) GetRange(ctx context.Context, volume string, start, end int64) ([]*RangeSingle, error) {
+func (cl *IndexClient) GetRange(ctx context.Context, volume string, start, end int64) ([]*RangeItem, error) {
 	// transform to offsets local to shards
 	bounds := cl.getBounds(start, end)
 
-	ranges := make([]*RangeSingle, len(bounds))
+	ranges := make([]*RangeItem, len(bounds))
 	tracker, subCtx := tomb.WithContext(ctx)
 
 	for i, bound := range bounds {
@@ -104,6 +103,70 @@ func (cl *IndexClient) GetRange(ctx context.Context, volume string, start, end i
 	return ranges, nil
 }
 
+func (cl *IndexClient) PutShard(ctx context.Context, volume string, start, end int64, entries []*api.IndexEntry) error {
+	bounds := cl.getBounds(start, end)
+	if len(bounds) != 1 {
+		return errors.New("index data out of shard bounds")
+	}
+	boundary := bounds[0]
+
+	s := cl.shardName(volume, boundary.Index)
+	node := cl.ring.Shard(s)
+	conn, err := cl.connection(node.Name)
+	if err != nil {
+		return err
+	}
+	stream, err := conn.PutRange(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = stream.Send(&api.IndexPutRangeRequest{
+		Msg: &api.IndexPutRangeRequest_Info_{
+			Info: &api.IndexPutRangeRequest_Info{
+				Start: start,
+				End:   end,
+				Shard: s,
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < len(entries); {
+		pack := len(entries) - i
+		if pack > 360000 {
+			pack = 360000
+		}
+
+		err = stream.Send(&api.IndexPutRangeRequest{
+			Msg: &api.IndexPutRangeRequest_Data_{
+				Data: &api.IndexPutRangeRequest_Data{
+					Slice: &api.IndexSlice{
+						Entries: entries[i : i+pack],
+					},
+				},
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		i += pack
+	}
+
+	resp, err := stream.CloseAndRecv()
+	if err != nil {
+		return err
+	}
+	if resp.Header.Error != 0 {
+		return errors.New(resp.Header.ErrorMsg)
+	}
+
+	return nil
+}
+
 func (cl *IndexClient) connection(name string) (*grpcIndexClientConnection, error) {
 	cl.connLock.Lock()
 	defer cl.connLock.Unlock()
@@ -133,7 +196,7 @@ func (cl *IndexClient) connection(name string) (*grpcIndexClientConnection, erro
 	return conn, nil
 }
 
-func (cl *IndexClient) retrieveShard(ctx context.Context, volume string, boundary shardBoundary) (*RangeSingle, error) {
+func (cl *IndexClient) retrieveShard(ctx context.Context, volume string, boundary shardBoundary) (*RangeItem, error) {
 	s := cl.shardName(volume, boundary.Index)
 	node := cl.ring.Shard(s)
 	conn, err := cl.connection(node.Name)
@@ -158,7 +221,7 @@ func (cl *IndexClient) retrieveShard(ctx context.Context, volume string, boundar
 		return nil, errors.New("invalid first message")
 	}
 
-	output := &RangeSingle{
+	output := &RangeItem{
 		End:    first.Info.End,
 		Start:  first.Info.Start,
 		Slices: nil,

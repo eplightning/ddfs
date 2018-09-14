@@ -14,6 +14,11 @@ import (
 	tomb "gopkg.in/tomb.v2"
 )
 
+type HashedData struct {
+	Hash []byte
+	Data []byte
+}
+
 type grpcBlockClientConnection struct {
 	api.BlockStoreClient
 	io.Closer
@@ -22,6 +27,17 @@ type grpcBlockClientConnection struct {
 type blockChunk struct {
 	node   string
 	chunks [][]byte
+}
+
+type BlockSlice struct {
+	Start  int64
+	End    int64
+	Slices []*api.IndexSlice
+}
+
+type reserveChunk struct {
+	node   string
+	chunks []*HashedData
 }
 
 type BlockClient struct {
@@ -48,7 +64,47 @@ func NewBlockClient(ctx context.Context, mon monitor.Client) (*BlockClient, erro
 	}, nil
 }
 
-func (cl *BlockClient) GetBlocks(ctx context.Context, indices []*RangeSingle) (map[string][]byte, error) {
+func (cl *BlockClient) WriteBlocks(ctx context.Context, blocks []*HashedData) error {
+	chunks, err := cl.splitWorkReserve(blocks)
+	if err != nil {
+		return err
+	}
+
+	tracker, subCtx := tomb.WithContext(ctx)
+	for _, chunk := range chunks {
+		func() {
+			chunk := chunk
+			tracker.Go(func() error {
+				err := cl.putAndReserve(subCtx, chunk.node, chunk.chunks)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+		}()
+	}
+
+	return tracker.Wait()
+}
+
+func (cl *BlockClient) GetBlock(ctx context.Context, hash []byte) ([]byte, error) {
+	node := cl.ring.Block(util.NewBlockHash(hash))
+	if node == nil {
+		return nil, errors.New("could not find node for block")
+	}
+	r, err := cl.retrieveBlocks(ctx, node.Name, [][]byte{hash})
+	if err != nil {
+		return nil, err
+	}
+	stringHash := string(hash)
+	x, ok := r[stringHash]
+	if !ok {
+		return nil, errors.New("not found")
+	}
+	return x, nil
+}
+
+func (cl *BlockClient) GetBlocks(ctx context.Context, indices []*BlockSlice) (map[string][]byte, error) {
 	chunks, err := cl.splitWork(indices)
 	if err != nil {
 		return nil, err
@@ -94,14 +150,55 @@ func (cl *BlockClient) GetBlocks(ctx context.Context, indices []*RangeSingle) (m
 
 }
 
-func (cl *BlockClient) splitWork(indices []*RangeSingle) ([]*blockChunk, error) {
+func (cl *BlockClient) splitWorkReserve(blocks []*HashedData) ([]*reserveChunk, error) {
 	// 400 000
-	byNode := make(map[string][][]byte)
+	byNode := make(map[string][]*HashedData)
+	chunks := make([]*reserveChunk, 0, 5000)
+
+	for _, entry := range blocks {
+		node := cl.ring.Block(util.NewBlockHash(entry.Hash))
+		if node == nil {
+			return nil, errors.New("could not find node for block")
+		}
+
+		nodeBlocks, ok := byNode[node.Name]
+		if !ok {
+			nodeBlocks = make([]*HashedData, 0, 1000)
+			byNode[node.Name] = nodeBlocks
+		} else {
+			if len(nodeBlocks) > 400000 {
+				chunks = append(chunks, &reserveChunk{
+					chunks: nodeBlocks,
+					node:   node.Name,
+				})
+				nodeBlocks = make([]*HashedData, 0, 1000)
+				byNode[node.Name] = nodeBlocks
+			}
+		}
+
+		byNode[node.Name] = append(nodeBlocks, entry)
+	}
+
+	for k, v := range byNode {
+		if len(v) > 0 {
+			chunks = append(chunks, &reserveChunk{
+				chunks: v,
+				node:   k,
+			})
+		}
+	}
+
+	return chunks, nil
+}
+
+func (cl *BlockClient) splitWork(indices []*BlockSlice) ([]*blockChunk, error) {
+	// 400 000
+	byNode := make(map[string]([][]byte))
 	chunks := make([]*blockChunk, 0, 5000)
 
 	for _, idx := range indices {
-		for _, slice := range idx.Slices {
-			for _, entry := range slice.Entries {
+		for _, x := range idx.Slices {
+			for _, entry := range x.Entries {
 				h, ok := entry.Entry.(*api.IndexEntry_Hash)
 				if ok {
 					node := cl.ring.Block(util.NewBlockHash(h.Hash.Hash))
@@ -169,6 +266,84 @@ func (cl *BlockClient) connection(name string) (*grpcBlockClientConnection, erro
 	}
 	cl.connections[name] = conn
 	return conn, nil
+}
+
+func (cl *BlockClient) putAndReserve(ctx context.Context, node string, chunks []*HashedData) error {
+	conn, err := cl.connection(node)
+	if err != nil {
+		return err
+	}
+
+	hashes := make([][]byte, len(chunks))
+	for i, data := range chunks {
+		hashes[i] = data.Hash
+	}
+
+	resp, err := conn.Reserve(ctx, &api.BlockReserveRequest{
+		Hashes: hashes,
+	})
+	if err != nil {
+		return err
+	}
+	if resp.Header.Error != 0 {
+		return errors.New(resp.Header.ErrorMsg)
+	}
+
+	stream, err := conn.Put(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = stream.Send(&api.BlockPutRequest{
+		Msg: &api.BlockPutRequest_Info_{
+			Info: &api.BlockPutRequest_Info{
+				ReservationId: resp.ReservationId,
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	chunk := make([][]byte, 0, 5)
+	maxLen := util.MaxMessageSize - 4096
+	var lenny int
+
+	for _, missing := range resp.MissingBlocks {
+		c := chunks[missing]
+		nextLen := lenny + len(c.Data)
+		if nextLen > maxLen && len(chunk) > 0 {
+			stream.Send(&api.BlockPutRequest{
+				Msg: &api.BlockPutRequest_Data_{
+					Data: &api.BlockPutRequest_Data{
+						Blocks: chunk,
+					},
+				},
+			})
+			chunk = make([][]byte, 0, 5)
+		}
+		lenny = nextLen
+		chunk = append(chunk, c.Data)
+	}
+	if len(chunk) > 0 {
+		stream.Send(&api.BlockPutRequest{
+			Msg: &api.BlockPutRequest_Data_{
+				Data: &api.BlockPutRequest_Data{
+					Blocks: chunk,
+				},
+			},
+		})
+	}
+
+	r, err := stream.CloseAndRecv()
+	if err != nil {
+		return err
+	}
+	if r.Header.Error != 0 {
+		return errors.New(r.Header.ErrorMsg)
+	}
+
+	return nil
 }
 
 func (cl *BlockClient) retrieveBlocks(ctx context.Context, node string, hashes [][]byte) (map[string][]byte, error) {
