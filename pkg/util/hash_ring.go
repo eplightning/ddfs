@@ -2,7 +2,7 @@ package util
 
 import (
 	"git.eplight.org/eplightning/ddfs/pkg/api"
-	"github.com/cespare/xxhash"
+	"github.com/OneOfOne/xxhash"
 	"github.com/eplightning/hashring"
 )
 
@@ -45,7 +45,8 @@ func (ring *KetamaRing) Block(hash *BlockHash) *api.Node {
 }
 
 func (ring *KetamaRing) Shard(shard string) *api.Node {
-	result, ok := ring.base.GetNodePosFromKey(hashring.HashKey((xxhash.Sum64String(shard) >> 32)))
+	h := hashring.HashKey(xxhash.ChecksumString32(shard))
+	result, ok := ring.base.GetNodePosFromKey(h)
 	if !ok {
 		return nil
 	}

@@ -10,12 +10,12 @@
   revision = "343706a395b76e5ca5c7dca46a5d937b48febc74"
 
 [[projects]]
-  digest = "1:4c69f3f6b7b2f6481f858db3cb7a84c7a5958287be33ec05ce4814ea49ef555d"
-  name = "github.com/cespare/xxhash"
+  digest = "1:3261411fa3369515015a5957d3b9881b806b8457025a034a7722dc3732fe15e8"
+  name = "github.com/OneOfOne/xxhash"
   packages = ["."]
   pruneopts = "UT"
-  revision = "569f7c8abf1f58d9043ab804d364483cb1c853b6"
-  version = "v1.1.0"
+  revision = "6def279d2ce6c81a79dd1c1be580f03bb216fb8a"
+  version = "v1.2.2"
 
 [[projects]]
   digest = "1:e3b55611cb86797357cc1cd2b3d38faf07ae3c4079f04b32e84d497422ab0d60"
@@ -441,7 +441,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/cespare/xxhash",
+    "github.com/OneOfOne/xxhash",
     "github.com/davecgh/go-spew/spew",
     "github.com/dgraph-io/badger",
     "github.com/eplightning/hashring",

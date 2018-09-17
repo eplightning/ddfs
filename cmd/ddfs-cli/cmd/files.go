@@ -43,7 +43,7 @@ func init() {
 		},
 	}
 	writeCmd.Flags().Int64("start", 0, "offset to start from")
-	writeCmd.Flags().Int64("end", 4096, "offset to end at (exclusive), start + size if 0")
+	writeCmd.Flags().Int64("end", 0, "offset to end at (exclusive), start + size if 0")
 	writeCmd.Flags().StringP("file", "f", "-", "file to write")
 
 	fileCmd.AddCommand(readCmd)

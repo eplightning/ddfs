@@ -209,6 +209,10 @@ func (s *ShardManager) handleVolumeUpdate(vol *api.Volume) error {
 				log.Info().Msgf("Loading shard %v", x)
 			}
 		} else {
+			if _, err := s.Shard(name); err != nil {
+				continue
+			}
+
 			log.Info().Msgf("Removing shard %v", x)
 			s.removeShard(name)
 			removed = append(removed, x)
@@ -216,8 +220,12 @@ func (s *ShardManager) handleVolumeUpdate(vol *api.Volume) error {
 		}
 	}
 	for x := range shardsTodo {
-		log.Info().Msgf("Creating shard %v", x)
 		name := s.shardName(vol.Name, x)
+		if _, err := s.Shard(name); err == nil {
+			continue
+		}
+
+		log.Info().Msgf("Creating shard %v", x)
 		s.createShard(name)
 		added = append(added, x)
 	}

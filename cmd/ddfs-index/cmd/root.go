@@ -77,7 +77,7 @@ func runServer(cmd *cobra.Command, args []string) {
 	log.Info().Msgf("Connected to monitor server %v", cc.Target())
 
 	shards := index.NewShardManager(
-		mon, viper.GetInt("sliceCacheCount"), viper.GetInt32("entries-per-slice"), viper.GetString("dataPath"), viper.GetString("serverName"))
+		mon, viper.GetInt("sliceCacheCount"), viper.GetInt32("entriesPerSlice"), viper.GetString("dataPath"), viper.GetString("serverName"))
 	srv := util.NewGrpcServer(viper.GetString("listen"))
 
 	util.InitSubsystems(shards, srv)
