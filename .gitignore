@@ -1,2 +1,4 @@
 tools/*/debug
 cmd/*/debug
+vendor
+dist
