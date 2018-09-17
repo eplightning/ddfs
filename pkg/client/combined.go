@@ -4,7 +4,11 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"errors"
+	"hash"
 	"io"
+
+	"golang.org/x/crypto/blake2b"
 
 	"git.eplight.org/eplightning/ddfs/pkg/api"
 	"git.eplight.org/eplightning/ddfs/pkg/chunker"
@@ -13,12 +17,14 @@ import (
 type CombinedClient struct {
 	blk *BlockClient
 	idx *IndexClient
+	cs  *api.ClientSettings
 }
 
 func NewCombinedClient(block *BlockClient, index *IndexClient) *CombinedClient {
 	return &CombinedClient{
 		blk: block,
 		idx: index,
+		cs:  index.cs,
 	}
 }
 
@@ -170,24 +176,39 @@ func (c *CombinedClient) Write(ctx context.Context, volume string, start, end in
 
 func (c *CombinedClient) chunkIt(reader io.Reader, pre *api.IndexEntry) ([]*api.IndexEntry, []*HashedData, error) {
 	entries := make([]*api.IndexEntry, 0, 1000)
-
 	if pre != nil {
 		entries = append(entries, pre)
 	}
-
 	hashed := make([]*HashedData, 0, 1000)
 
-	/*
-		MaxSize: 4 * 1024 * 1024,
-		MinSize: 100 * 1024,
-		Poly:    12313278162312893,*/
+	var err error
+	var baseChunker chunker.Chunker
+	var hasher hash.Hash
 
-	baseChunker := chunker.NewRabinChunker(100*1024, 4*1024*1024, 12313278162312893)
-	fillChunker := chunker.NewFillDetectingChunker(baseChunker, int(c.idx.cs.MinFillSize))
-	hasher := sha256.New()
+	switch c.cs.HashAlgo {
+	case api.HashAlgorithm_BLAKE2B256:
+		hasher, err = blake2b.New256(nil)
+		if err != nil {
+			return nil, nil, err
+		}
+	case api.HashAlgorithm_SHA256:
+		hasher = sha256.New()
+	default:
+		return nil, nil, errors.New("invalid chunker")
+	}
+
+	switch t := c.cs.ChunkAlgo.(type) {
+	case *api.ClientSettings_Rabin:
+		baseChunker = chunker.NewRabinChunker(int(t.Rabin.MinSize), int(t.Rabin.MaxSize), t.Rabin.Poly)
+	case *api.ClientSettings_Fixed:
+		baseChunker = chunker.NewFixedChunker(int(t.Fixed.MaxSize))
+	default:
+		return nil, nil, errors.New("invalid chunker")
+	}
+
+	fillChunker := chunker.NewFillDetectingChunker(baseChunker, int(c.cs.MinFillSize))
 	fillChunker.Reset(reader)
 
-	var err error
 	var chunk chunker.Chunk
 
 	for {

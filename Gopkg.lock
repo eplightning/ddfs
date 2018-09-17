@@ -266,7 +266,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6b9a3226ec04896848948ade49883c74e691d498987e5db5486bbe17dc492f05"
+  digest = "1:f671d1bf443c7551bb7fe0473e0ce5524c98660e98ec42575187a3e28b330ab5"
   name = "go.etcd.io/etcd"
   packages = [
     "auth/authpb",
@@ -274,6 +274,7 @@
     "clientv3/balancer",
     "clientv3/balancer/picker",
     "clientv3/balancer/resolver/endpoint",
+    "clientv3/concurrency",
     "clientv3/namespace",
     "etcdserver/api/v3rpc/rpctypes",
     "etcdserver/etcdserverpb",
@@ -320,6 +321,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:f0b918a9d2a0d3dcd073cbb908d81b0166af14b8bc765039673d1120c71e17cc"
+  name = "golang.org/x/crypto"
+  packages = ["blake2b"]
+  pruneopts = "UT"
+  revision = "0e37d006457bf46f9e6692014ba72ef82c33022c"
+
+[[projects]]
+  branch = "master"
   digest = "1:deafe4ab271911fec7de5b693d7faae3f38796d9eb8622e2b9e7df42bb3dfea9"
   name = "golang.org/x/net"
   packages = [
@@ -336,9 +345,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6eb2645d74b43d9c87b51947df39f7c668a4f422cd512053f7f6f75bfaad0197"
+  digest = "1:711af68777cecdb46e65dc72c0878c47872c1d39c12a198ded31d36a783a9aff"
   name = "golang.org/x/sys"
-  packages = ["unix"]
+  packages = [
+    "cpu",
+    "unix",
+  ]
   pruneopts = "UT"
   revision = "d0be0721c37eeb5299f245a996a483160fc36940"
 
@@ -444,8 +456,10 @@
     "github.com/spf13/cobra",
     "github.com/spf13/viper",
     "go.etcd.io/etcd/clientv3",
+    "go.etcd.io/etcd/clientv3/concurrency",
     "go.etcd.io/etcd/clientv3/namespace",
     "go.etcd.io/etcd/mvcc/mvccpb",
+    "golang.org/x/crypto/blake2b",
     "golang.org/x/net/context",
     "google.golang.org/grpc",
     "gopkg.in/tomb.v2",

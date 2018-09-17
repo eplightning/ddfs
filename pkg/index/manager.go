@@ -150,8 +150,7 @@ func (s *ShardManager) Start(ctl *util.SubsystemControl) {
 		<-s.context.Done()
 		watch.Send(&api.WatchVolumesRequest{
 			Header: &api.WatchRequestHeader{
-				StartRevision: s.volumeRevision,
-				End:           true,
+				End: true,
 			},
 		})
 

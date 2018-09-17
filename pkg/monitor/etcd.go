@@ -3,6 +3,7 @@ package monitor
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 
 	"git.eplight.org/eplightning/ddfs/pkg/api"
@@ -11,6 +12,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/rs/zerolog/log"
 	"go.etcd.io/etcd/clientv3"
+	"go.etcd.io/etcd/clientv3/concurrency"
 	"go.etcd.io/etcd/clientv3/namespace"
 	"go.etcd.io/etcd/mvcc/mvccpb"
 )
@@ -21,6 +23,9 @@ type EtcdManager struct {
 	client         *clientv3.Client
 	bootstrapFile  string
 	bootstrapForce bool
+	localMutex     sync.Mutex
+	globalMutex    *concurrency.Mutex
+	session        *concurrency.Session
 }
 
 func NewEtcdManager(servers []string, prefix string, bootstrapFile string, bootstrapForce bool) *EtcdManager {
@@ -46,8 +51,20 @@ func (m *EtcdManager) Init() error {
 	m.client.Watcher = namespace.NewWatcher(m.client.Watcher, m.prefix)
 	m.client.Lease = namespace.NewLease(m.client.Lease, m.prefix)
 
+	sess, err := concurrency.NewSession(m.client)
+	if err != nil {
+		return err
+	}
+	m.session = sess
+	m.globalMutex = concurrency.NewMutex(sess, "global-lock/")
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+
+	if err := m.globalMutex.Lock(ctx); err != nil {
+		return err
+	}
+	defer m.globalMutex.Unlock(ctx)
 
 	resp, err := m.client.Get(ctx, "init")
 	if err != nil {
@@ -79,6 +96,7 @@ func (m *EtcdManager) Start(ctl *util.SubsystemControl) {
 	go func() {
 		defer ctl.WaitGroup.Done()
 		defer m.client.Close()
+		defer m.session.Close()
 		<-ctl.Stop
 	}()
 }
@@ -176,7 +194,13 @@ func (m *EtcdManager) WatchVolumes(ctx context.Context, start int64) chan []*api
 }
 
 func (m *EtcdManager) ModifyVolume(ctx context.Context, name string, shards int64) error {
-	// TODO: transactions or mutex
+	m.localMutex.Lock()
+	defer m.localMutex.Unlock()
+	if err := m.globalMutex.Lock(ctx); err != nil {
+		return err
+	}
+	defer m.globalMutex.Unlock(ctx)
+
 	key := "volumes/" + name
 	resp, err := m.client.Get(ctx, key)
 	if err != nil {
@@ -220,7 +244,13 @@ func (m *EtcdManager) ModifyVolume(ctx context.Context, name string, shards int6
 }
 
 func (m *EtcdManager) UpdateVolumeShards(ctx context.Context, name string, added []int64, removed []int64) error {
-	// TODO: transactions or mutex
+	m.localMutex.Lock()
+	defer m.localMutex.Unlock()
+	if err := m.globalMutex.Lock(ctx); err != nil {
+		return err
+	}
+	defer m.globalMutex.Unlock(ctx)
+
 	key := "volumes/" + name
 	resp, err := m.client.Get(ctx, key)
 	if err != nil {
@@ -292,16 +322,30 @@ func (m *EtcdManager) fetchAndUnmarshal(ctx context.Context, key string, msg pro
 }
 
 func (m *EtcdManager) initMonitor(ctx context.Context, boot BootstrapData) error {
-	cs := &api.ClientSettings{
-		MinFillSize: boot.Settings.MinFillSize,
-		HashAlgo:    api.HashAlgorithm_SHA256,
-		ChunkAlgo: &api.ClientSettings_Rabin{
-			Rabin: &api.RabinChunkAlgorithm{
-				MaxSize: boot.Settings.RabinMaxSize,
-				MinSize: boot.Settings.RabinMinSize,
-				Poly:    boot.Settings.RabinPoly,
+	var cs *api.ClientSettings
+
+	if boot.Settings.Chunker == "rabin" {
+		cs = &api.ClientSettings{
+			MinFillSize: boot.Settings.MinFillSize,
+			HashAlgo:    api.HashAlgorithm(api.HashAlgorithm_value[boot.Settings.HashAlgorithm]),
+			ChunkAlgo: &api.ClientSettings_Rabin{
+				Rabin: &api.RabinChunkAlgorithm{
+					MaxSize: boot.Settings.RabinMaxSize,
+					MinSize: boot.Settings.RabinMinSize,
+					Poly:    boot.Settings.RabinPoly,
+				},
 			},
-		},
+		}
+	} else {
+		cs = &api.ClientSettings{
+			MinFillSize: boot.Settings.MinFillSize,
+			HashAlgo:    api.HashAlgorithm(api.HashAlgorithm_value[boot.Settings.HashAlgorithm]),
+			ChunkAlgo: &api.ClientSettings_Fixed{
+				Fixed: &api.FixedChunkAlgorithm{
+					MaxSize: boot.Settings.FixedMaxSize,
+				},
+			},
+		}
 	}
 
 	ss := &api.ServerSettings{

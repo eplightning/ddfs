@@ -15,7 +15,7 @@
             "host": "127.0.0.1",
             "program": "${fileDirname}",
             "env": {},
-            "args": ["file", "write", "first", "-f", "/home/eplightning/ROG-STRIX-B350-F-GAMING-ASUS-3803.zip", "--start", "0", "--end", "10"],
+            "args": ["file", "write", "first", "-f", "/home/eplightning/ROG-STRIX-B350-F-GAMING-ASUS-3803.CAP", "--start", "0", "--end", "16779272"],
             "showLog": false
         }
     ]
