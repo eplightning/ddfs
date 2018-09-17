@@ -27,11 +27,10 @@ func init() {
 	watchCmd.Flags().Int64("revision", 1, "revision to start from")
 
 	modifyCmd := &cobra.Command{
-		Use:        "modify",
-		Short:      "Modify volumes",
-		Run:        modifyVolumes,
-		Args:       cobra.ExactArgs(1),
-		ArgAliases: []string{"volume"},
+		Use:   "modify [VOLUME]",
+		Short: "Modify volumes",
+		Run:   modifyVolumes,
+		Args:  cobra.ExactArgs(1),
 	}
 	modifyCmd.Flags().Int64("shards", 1, "how many shards")
 	modifyCmd.MarkFlagRequired("shards")

@@ -305,8 +305,7 @@ func (m *EtcdManager) initMonitor(ctx context.Context, boot BootstrapData) error
 	}
 
 	ss := &api.ServerSettings{
-		ShardEntriesPerSlice: boot.Settings.ShardEntriesPerSlice,
-		ShardSize:            boot.Settings.ShardSize,
+		ShardSize: boot.Settings.ShardSize,
 	}
 
 	blocks := &api.NodeReplicaSets{Sets: make([]*api.NodeReplicaSet, 0, 1)}

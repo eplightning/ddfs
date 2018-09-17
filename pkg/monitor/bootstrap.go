@@ -17,13 +17,12 @@ type BootstrapVolume struct {
 }
 
 type BootstrapSettings struct {
-	ShardEntriesPerSlice int32 `json:"shardEntriesPerSlice" yaml:"shardEntriesPerSlice"`
-	ShardSize            int64 `json:"shardSize" yaml:"shardSize"`
-	MinFillSize          int32 `json:"minFillSize" yaml:"minFillSize"`
-	Chunker              string
-	RabinMaxSize         int32  `json:"rabinMaxSize" yaml:"rabinMaxSize"`
-	RabinMinSize         int32  `json:"rabinMinSize" yaml:"rabinMinSize"`
-	RabinPoly            uint64 `json:"rabinPoly" yaml:"rabinPoly"`
+	ShardSize    int64 `json:"shardSize" yaml:"shardSize"`
+	MinFillSize  int32 `json:"minFillSize" yaml:"minFillSize"`
+	Chunker      string
+	RabinMaxSize int32  `json:"rabinMaxSize" yaml:"rabinMaxSize"`
+	RabinMinSize int32  `json:"rabinMinSize" yaml:"rabinMinSize"`
+	RabinPoly    uint64 `json:"rabinPoly" yaml:"rabinPoly"`
 }
 
 type BootstrapData struct {
@@ -36,13 +35,12 @@ type BootstrapData struct {
 func DefaultBootstrapData() BootstrapData {
 	return BootstrapData{
 		Settings: BootstrapSettings{
-			ShardEntriesPerSlice: 1024,
-			ShardSize:            256 * 1024 * 1024 * 1024,
-			MinFillSize:          1024,
-			Chunker:              "rabin",
-			RabinMaxSize:         4 * 1024 * 1024,
-			RabinMinSize:         100 * 1024,
-			RabinPoly:            12313278162312893,
+			ShardSize:    256 * 1024 * 1024 * 1024,
+			MinFillSize:  1024,
+			Chunker:      "rabin",
+			RabinMaxSize: 4 * 1024 * 1024,
+			RabinMinSize: 100 * 1024,
+			RabinPoly:    12313278162312893,
 		},
 		Blocks: []BootstrapNode{
 			BootstrapNode{

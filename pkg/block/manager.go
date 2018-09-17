@@ -11,15 +11,19 @@ import (
 )
 
 type BlockManager struct {
-	stor     storage.Storage
-	meta     *MetadataManager
-	rvm      *ReservationManager
-	dataPath string
+	stor       storage.Storage
+	meta       *MetadataManager
+	rvm        *ReservationManager
+	dataPath   string
+	metaCache  int
+	blockCache int
 }
 
-func NewBlockManager(dataPath string) *BlockManager {
+func NewBlockManager(dataPath string, metaCache int, blockCache int) *BlockManager {
 	return &BlockManager{
-		dataPath: dataPath,
+		dataPath:   dataPath,
+		metaCache:  metaCache,
+		blockCache: blockCache,
 	}
 }
 
@@ -71,21 +75,31 @@ func (m *BlockManager) Delete(bytes [][]byte) error {
 }
 
 func (m *BlockManager) Reserve(bytes [][]byte) (string, []int32, error) {
-	// TODO: rlock when gc is ready
 	missing := make([]int32, 0, len(bytes)/2)
+
+	// prevent clients from uploading redundant blocks
+	history := make(map[string]bool)
+
 	for i, b := range bytes {
-		res, err := m.meta.GetReferences(util.NewBlockHash(b))
-		if err != nil {
-			return "", nil, err
-		}
-		if res == 0 {
-			missing = append(missing, int32(i))
+		h := util.NewBlockHash(b)
+
+		if !history[h.String()] {
+			res, err := m.meta.GetReferences(h)
+			if err != nil {
+				return "", nil, err
+			}
+			if res == 0 {
+				missing = append(missing, int32(i))
+			}
+			history[h.String()] = true
 		}
 	}
+
 	id, err := m.rvm.Create(bytes, missing)
 	if err != nil {
 		return "", nil, err
 	}
+
 	return id, missing, nil
 }
 
@@ -136,14 +150,14 @@ func (s *BlockManager) Init() error {
 		return err
 	}
 
-	meta, err := NewMetadataManager(db, 1024*1024)
+	meta, err := NewMetadataManager(db, s.metaCache)
 	if err != nil {
 		return err
 	}
 	s.meta = meta
 	s.rvm = NewReservationManager(db, meta)
 
-	storage, err := storage.NewCachedStorage(storage.NewFilesystemStorage(path.Join(s.dataPath, "blocks")), 1024)
+	storage, err := storage.NewCachedStorage(storage.NewFilesystemStorage(path.Join(s.dataPath, "blocks")), s.blockCache)
 	if err != nil {
 		return err
 	}

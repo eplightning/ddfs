@@ -18,33 +18,35 @@ import (
 )
 
 type ShardManager struct {
-	mon            monitor.Client
-	shards         map[string]*Shard
-	mutex          sync.RWMutex
-	cache          *lru.ARCCache
-	db             *badger.DB
-	cacheSize      int
-	dataPath       string
-	context        context.Context
-	cancel         context.CancelFunc
-	watch          chan *api.Volume
-	serverSettings *api.ServerSettings
-	volumeRevision int64
-	indexRing      util.HashRing
-	name           string
+	mon             monitor.Client
+	shards          map[string]*Shard
+	mutex           sync.RWMutex
+	cache           *lru.ARCCache
+	db              *badger.DB
+	cacheSize       int
+	dataPath        string
+	context         context.Context
+	cancel          context.CancelFunc
+	watch           chan *api.Volume
+	serverSettings  *api.ServerSettings
+	volumeRevision  int64
+	indexRing       util.HashRing
+	name            string
+	entriesPerSlice int32
 }
 
-func NewShardManager(mon monitor.Client, cacheSize int, dataPath string, name string) *ShardManager {
+func NewShardManager(mon monitor.Client, cacheSize int, entriesPerSlice int32, dataPath string, name string) *ShardManager {
 	context, cancel := context.WithCancel(context.Background())
 
 	return &ShardManager{
-		mon:       mon,
-		shards:    make(map[string]*Shard),
-		cacheSize: cacheSize,
-		dataPath:  dataPath,
-		context:   context,
-		cancel:    cancel,
-		name:      name,
+		mon:             mon,
+		shards:          make(map[string]*Shard),
+		cacheSize:       cacheSize,
+		dataPath:        dataPath,
+		context:         context,
+		cancel:          cancel,
+		name:            name,
+		entriesPerSlice: entriesPerSlice,
 	}
 }
 
@@ -261,7 +263,7 @@ func (s *ShardManager) loadShard(name string) (bool, error) {
 		ID:        name,
 		New:       false,
 		Size:      s.serverSettings.ShardSize,
-		SliceSize: s.serverSettings.ShardEntriesPerSlice,
+		SliceSize: s.entriesPerSlice,
 	}, s.db, s.cache)
 	if err != nil {
 		return false, err
@@ -277,7 +279,7 @@ func (s *ShardManager) createShard(name string) error {
 		ID:        name,
 		New:       true,
 		Size:      s.serverSettings.ShardSize,
-		SliceSize: s.serverSettings.ShardEntriesPerSlice,
+		SliceSize: s.entriesPerSlice,
 	}, s.db, s.cache)
 	if err != nil {
 		return err

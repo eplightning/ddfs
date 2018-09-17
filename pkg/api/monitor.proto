@@ -78,7 +78,6 @@ message ServerSettingsResponse {
 
 message ServerSettings {
     int64 shard_size = 1;
-    int32 shard_entries_per_slice = 2;
 }
 
 //
