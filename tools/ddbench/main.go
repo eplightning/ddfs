@@ -12,7 +12,7 @@ import (
 )
 
 var chunkerFlag = flag.String("chunker", "fixed", "chunking method [fixed|rabin]")
-var chunkerFixedBlockSizeFlag = flag.Int("chunker-block-size", 4096, "block size for fixed chunker")
+var chunkerFixedBlockSizeFlag = flag.Int("chunker-block-size", 16*4096, "block size for fixed chunker")
 var chunkerVarMinSizeFlag = flag.Int("chunker-min-size", 512*1024, "min block size for variable chunkers")
 var chunkerVarMaxSizeFlag = flag.Int("chunker-max-size", 8*1024*1024, "max block size for variable chunkers")
 var dataDirectory = flag.String("data-path", "/tmp/data", "path to data")
@@ -26,16 +26,22 @@ func main() {
 	pathChannel := make(chan string, 1)
 	hasher := sha256.New()
 
-	var chunker ch.Chunker
+	var baseChunker ch.Chunker
+
+	fillSize := 4096
 
 	switch *chunkerFlag {
 	case "rabin":
-		chunker = ch.NewRabinChunker(*chunkerVarMinSizeFlag, *chunkerVarMaxSizeFlag, 14152035864944967)
+		baseChunker = ch.NewRabinChunker(*chunkerVarMinSizeFlag, *chunkerVarMaxSizeFlag, 14152035864944967)
+		fillSize = *chunkerFixedBlockSizeFlag
 		log.Println("Using rabin chunker")
 	default:
-		chunker = ch.NewFixedChunker(*chunkerFixedBlockSizeFlag)
+		baseChunker = ch.NewFixedChunker(*chunkerFixedBlockSizeFlag)
+		fillSize = *chunkerFixedBlockSizeFlag
 		log.Println("Using fixed block size chunker")
 	}
+
+	chunker := ch.NewFillDetectingChunker(baseChunker, fillSize-100)
 
 	opts := badger.DefaultOptions
 	opts.Dir = *dbDirectory

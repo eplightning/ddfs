@@ -1,13 +1,21 @@
 package internal
 
-import "git.eplight.org/eplightning/ddfs/pkg/chunker"
+import (
+	"time"
+
+	"git.eplight.org/eplightning/ddfs/pkg/chunker"
+)
 
 type ChunkToProcess struct {
 	Chunk []byte
 }
 
 type ChunkMetrics struct {
-	Chunks int64
+	Chunks      int64
+	DataChunks  int64
+	FillChunks  int64
+	FillSize    int64
+	TimeElapsed time.Duration
 }
 
 type ChunkPipeline struct {
@@ -30,19 +38,33 @@ func (pipeline *ChunkPipeline) Process() {
 		pipeline.chunker.Reset(file.Stream)
 
 		var err error
-		var chunk []byte
+		var chunk chunker.Chunk
 
-		for err == nil {
-			chunk, err = pipeline.chunker.NextChunk()
+		func() {
+			startTime := time.Now()
 
-			if len(chunk) > 0 {
+			for {
+				chunk, err = pipeline.chunker.NextChunk()
+				if err != nil || chunk == nil {
+					break
+				}
+
 				pipeline.metrics.Chunks++
 
-				pipeline.output <- ChunkToProcess{
-					Chunk: chunk,
+				switch f := chunk.(type) {
+				case *chunker.FillChunk:
+					pipeline.metrics.FillChunks++
+					pipeline.metrics.FillSize = pipeline.metrics.FillSize + int64(f.Size)
+				case *chunker.RawChunk:
+					pipeline.metrics.DataChunks++
+					pipeline.output <- ChunkToProcess{
+						Chunk: f.Raw,
+					}
 				}
 			}
-		}
+
+			pipeline.metrics.TimeElapsed = pipeline.metrics.TimeElapsed + time.Since(startTime)
+		}()
 
 		file.Stream.Close()
 	}

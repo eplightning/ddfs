@@ -1,6 +1,9 @@
 package internal
 
-import "hash"
+import (
+	"hash"
+	"time"
+)
 
 type HashToProcess struct {
 	Hash  []byte
@@ -8,7 +11,8 @@ type HashToProcess struct {
 }
 
 type HashMetrics struct {
-	Hashes int64
+	Hashes      int64
+	TimeElapsed time.Duration
 }
 
 type HashPipeline struct {
@@ -31,10 +35,13 @@ func (pipeline *HashPipeline) Process() {
 		pipeline.metrics.Hashes++
 
 		pipeline.hasher.Reset()
+
+		startTime := time.Now()
 		pipeline.hasher.Write(chunk.Chunk)
 
 		buffer := make([]byte, 0, 32)
 		buffer = pipeline.hasher.Sum(buffer)
+		pipeline.metrics.TimeElapsed = pipeline.metrics.TimeElapsed + time.Since(startTime)
 
 		pipeline.output <- HashToProcess{
 			Hash:  buffer,

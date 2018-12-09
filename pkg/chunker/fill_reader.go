@@ -1,18 +1,35 @@
 package chunker
 
-import "io"
+import (
+	"io"
+)
 
 type fillReader struct {
-	base       io.Reader
-	detector   fillDetector
-	chunks     []FillChunk
-	baseErr    error
-	secondRead bool
-	blocked    bool
-	tmpBuffer  []byte
+	base           io.Reader
+	detector       fillDetector
+	chunks         []FillChunk
+	baseErr        error
+	secondRead     bool
+	blocked        bool
+	tmpBuffer      []byte
+	tmpBufferSlice []byte
 }
 
 func (reader *fillReader) Read(p []byte) (n int, err error) {
+	tmpLen := len(reader.tmpBufferSlice)
+
+	if tmpLen > 0 {
+		if len(p) >= tmpLen {
+			copy(p[0:tmpLen], reader.tmpBufferSlice[0:tmpLen])
+			reader.tmpBufferSlice = nil
+			return n, nil
+		} else {
+			copy(p[0:len(p)], reader.tmpBufferSlice[0:len(p)])
+			reader.tmpBufferSlice = reader.tmpBufferSlice[len(p):]
+			return len(p), nil
+		}
+	}
+
 	if reader.baseErr != nil {
 		return 0, reader.baseErr
 	}
@@ -26,8 +43,16 @@ func (reader *fillReader) Read(p []byte) (n int, err error) {
 			reader.tmpBuffer = make([]byte, reader.detector.minSize+1)
 		}
 		n, err := reader.Read(reader.tmpBuffer)
-		copy(p[0:n], reader.tmpBuffer[0:n])
-		return n, err
+
+		if len(p) >= n {
+			reader.tmpBufferSlice = nil
+			copy(p[0:n], reader.tmpBuffer[0:n])
+			return n, err
+		} else {
+			reader.tmpBufferSlice = reader.tmpBuffer[len(p):]
+			copy(p[0:len(p)], reader.tmpBuffer[0:len(p)])
+			return len(p), err
+		}
 	}
 
 	// on first read try to find fill blocks
