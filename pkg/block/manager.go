@@ -4,8 +4,8 @@ import (
 	"os"
 	"path"
 
-	"git.eplight.org/eplightning/ddfs/pkg/storage"
-	"git.eplight.org/eplightning/ddfs/pkg/util"
+	"github.com/eplightning/ddfs/pkg/storage"
+	"github.com/eplightning/ddfs/pkg/util"
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
 )

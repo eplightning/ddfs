@@ -3,7 +3,7 @@ package monitor
 import (
 	"io"
 
-	"git.eplight.org/eplightning/ddfs/pkg/api"
+	"github.com/eplightning/ddfs/pkg/api"
 	"google.golang.org/grpc"
 )
 

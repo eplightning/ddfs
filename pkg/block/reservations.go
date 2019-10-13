@@ -3,8 +3,8 @@ package block
 import (
 	"sync"
 
-	"git.eplight.org/eplightning/ddfs/pkg/api"
-	"git.eplight.org/eplightning/ddfs/pkg/util"
+	"github.com/eplightning/ddfs/pkg/api"
+	"github.com/eplightning/ddfs/pkg/util"
 	"github.com/dgraph-io/badger"
 	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"

@@ -6,15 +6,15 @@ import (
 	"strconv"
 	"sync"
 
-	"git.eplight.org/eplightning/ddfs/pkg/api"
+	"github.com/eplightning/ddfs/pkg/api"
 
 	"github.com/dgraph-io/badger"
 	"github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
-	"git.eplight.org/eplightning/ddfs/pkg/monitor"
-	"git.eplight.org/eplightning/ddfs/pkg/util"
+	"github.com/eplightning/ddfs/pkg/monitor"
+	"github.com/eplightning/ddfs/pkg/util"
 )
 
 type ShardManager struct {

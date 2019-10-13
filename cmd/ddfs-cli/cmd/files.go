@@ -6,8 +6,8 @@ import (
 	"io"
 	"os"
 
-	"git.eplight.org/eplightning/ddfs/pkg/client"
-	"git.eplight.org/eplightning/ddfs/pkg/monitor"
+	"github.com/eplightning/ddfs/pkg/client"
+	"github.com/eplightning/ddfs/pkg/monitor"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

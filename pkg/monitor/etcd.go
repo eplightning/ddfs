@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"git.eplight.org/eplightning/ddfs/pkg/api"
+	"github.com/eplightning/ddfs/pkg/api"
 
-	"git.eplight.org/eplightning/ddfs/pkg/util"
+	"github.com/eplightning/ddfs/pkg/util"
 	"github.com/gogo/protobuf/proto"
 	"github.com/rs/zerolog/log"
 	"go.etcd.io/etcd/clientv3"

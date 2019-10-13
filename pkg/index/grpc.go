@@ -3,7 +3,7 @@ package index
 import (
 	"io"
 
-	"git.eplight.org/eplightning/ddfs/pkg/api"
+	"github.com/eplightning/ddfs/pkg/api"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )

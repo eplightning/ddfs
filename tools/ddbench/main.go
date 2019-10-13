@@ -5,8 +5,8 @@ import (
 	"flag"
 	"log"
 
-	ch "git.eplight.org/eplightning/ddfs/pkg/chunker"
-	"git.eplight.org/eplightning/ddfs/tools/ddbench/internal"
+	ch "github.com/eplightning/ddfs/pkg/chunker"
+	"github.com/eplightning/ddfs/tools/ddbench/internal"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/dgraph-io/badger"
 )

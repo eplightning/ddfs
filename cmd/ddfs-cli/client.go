@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"time"
 
-	"git.eplight.org/eplightning/ddfs/cmd/ddfs-cli/cmd"
+	"github.com/eplightning/ddfs/cmd/ddfs-cli/cmd"
 )
 
 func main() {

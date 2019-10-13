@@ -3,10 +3,10 @@ package cmd
 import (
 	"os"
 
-	"git.eplight.org/eplightning/ddfs/pkg/api"
-	"git.eplight.org/eplightning/ddfs/pkg/monitor"
+	"github.com/eplightning/ddfs/pkg/api"
+	"github.com/eplightning/ddfs/pkg/monitor"
 
-	"git.eplight.org/eplightning/ddfs/pkg/util"
+	"github.com/eplightning/ddfs/pkg/util"
 	"github.com/spf13/viper"
 
 	"github.com/rs/zerolog/log"

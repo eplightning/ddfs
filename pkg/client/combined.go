@@ -10,8 +10,8 @@ import (
 
 	"golang.org/x/crypto/blake2b"
 
-	"git.eplight.org/eplightning/ddfs/pkg/api"
-	"git.eplight.org/eplightning/ddfs/pkg/chunker"
+	"github.com/eplightning/ddfs/pkg/api"
+	"github.com/eplightning/ddfs/pkg/chunker"
 )
 
 type CombinedClient struct {

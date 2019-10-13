@@ -3,7 +3,7 @@ package monitor
 import (
 	"context"
 
-	"git.eplight.org/eplightning/ddfs/pkg/api"
+	"github.com/eplightning/ddfs/pkg/api"
 )
 
 type MonitorGrpc struct {

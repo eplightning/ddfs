@@ -3,7 +3,7 @@ package internal
 import (
 	"time"
 
-	"git.eplight.org/eplightning/ddfs/pkg/chunker"
+	"github.com/eplightning/ddfs/pkg/chunker"
 )
 
 type ChunkToProcess struct {

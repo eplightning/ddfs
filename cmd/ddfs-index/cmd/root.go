@@ -4,12 +4,12 @@ import (
 	"os"
 	"time"
 
-	"git.eplight.org/eplightning/ddfs/pkg/api"
-	"git.eplight.org/eplightning/ddfs/pkg/index"
-	"git.eplight.org/eplightning/ddfs/pkg/monitor"
+	"github.com/eplightning/ddfs/pkg/api"
+	"github.com/eplightning/ddfs/pkg/index"
+	"github.com/eplightning/ddfs/pkg/monitor"
 	"google.golang.org/grpc"
 
-	"git.eplight.org/eplightning/ddfs/pkg/util"
+	"github.com/eplightning/ddfs/pkg/util"
 	"github.com/spf13/viper"
 
 	"github.com/rs/zerolog/log"

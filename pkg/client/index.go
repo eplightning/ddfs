@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"git.eplight.org/eplightning/ddfs/pkg/api"
-	"git.eplight.org/eplightning/ddfs/pkg/monitor"
-	"git.eplight.org/eplightning/ddfs/pkg/util"
+	"github.com/eplightning/ddfs/pkg/api"
+	"github.com/eplightning/ddfs/pkg/monitor"
+	"github.com/eplightning/ddfs/pkg/util"
 	"google.golang.org/grpc"
 	tomb "gopkg.in/tomb.v2"
 )

@@ -1,7 +1,7 @@
 package util
 
 import (
-	"git.eplight.org/eplightning/ddfs/pkg/api"
+	"github.com/eplightning/ddfs/pkg/api"
 	"github.com/OneOfOne/xxhash"
 	"github.com/eplightning/hashring"
 )

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"git.eplight.org/eplightning/ddfs/pkg/api"
-	"git.eplight.org/eplightning/ddfs/pkg/monitor"
+	"github.com/eplightning/ddfs/pkg/api"
+	"github.com/eplightning/ddfs/pkg/monitor"
 	"google.golang.org/grpc"
 )
 

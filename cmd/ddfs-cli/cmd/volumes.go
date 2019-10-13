@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"git.eplight.org/eplightning/ddfs/pkg/api"
-	"git.eplight.org/eplightning/ddfs/pkg/client"
+	"github.com/eplightning/ddfs/pkg/api"
+	"github.com/eplightning/ddfs/pkg/client"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
